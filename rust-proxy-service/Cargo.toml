@@ -1,0 +1,61 @@
+[package]
+name = "rust-proxy-service"
+version = "1.0.0"
+edition = "2021"
+
+[dependencies]
+# Web framework
+axum = "0.7"
+tokio = { version = "1", features = ["full"] }
+tower = { version = "0.4", features = ["full"] }
+tower-http = { version = "0.5", features = ["cors", "trace", "timeout"] }
+tower_governor = "0.4"
+hyper = { version = "1", features = ["full"] }
+hyper-util = { version = "0.1", features = ["full"] }
+http-body-util = "0.1"
+
+# Database (SQLx with compile-time checking)
+sqlx = { version = "0.7", features = ["runtime-tokio", "postgres", "uuid", "chrono"] }
+
+# Serialization
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+# HTTP client
+reqwest = { version = "0.11", features = ["json", "stream"] }
+
+# Metrics
+prometheus = "0.13"
+lazy_static = "1.4"
+
+# Logging
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
+
+# Error handling
+anyhow = "1"
+thiserror = "1"
+
+# Utils
+uuid = { version = "1", features = ["v4", "serde"] }
+chrono = { version = "0.4", features = ["serde"] }
+bytes = "1"
+url = "2"
+urlencoding = "2"
+
+# Token counting
+tiktoken-rs = "0.5"
+
+# JWT and Auth
+jsonwebtoken = "9"
+bcrypt = "0.15"
+
+[[bin]]
+name = "proxy-server"
+path = "src/main.rs"
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+strip = true

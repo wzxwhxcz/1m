@@ -1,47 +1,75 @@
+# 环境变量
+.env
+.env.local
+.env.production
+
 # Python
 __pycache__/
 *.py[cod]
 *$py.class
 *.so
 .Python
-*.egg-info/
-dist/
-build/
-
-# Virtual Environment
 venv/
 env/
 ENV/
+.venv
+
+# Rust
+target/
+Cargo.lock
+**/*.rs.bk
+
+# Go
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+bin/
+pkg/
+
+# Node
+node_modules/
+dist/
+build/
+.next/
+out/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
 
 # IDE
 .vscode/
 .idea/
 *.swp
 *.swo
+*~
 
 # OS
 .DS_Store
 Thumbs.db
 
-# Logs
+# 日志
 *.log
+logs/
 
-# Cache
-.cache/
-*.cache
+# 数据库
+*.db
+*.sqlite
+*.sqlite3
 
-# Jupyter
-.ipynb_checkpoints/
+# Redis dump
+dump.rdb
 
-# Model files (large)
-*.bin
-*.pt
-*.pth
-*.onnx
-
-# HuggingFace cache
-.huggingface/
-
-# Test outputs
+# 临时文件
 *.tmp
 *.temp
+.cache/
+
+# 构建产物
+*.wasm
+*.wasm.gz
+
+# Docker
+.dockerignore
+docker-compose.override.yml

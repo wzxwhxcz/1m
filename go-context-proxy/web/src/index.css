@@ -1,0 +1,64 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background: #0F1117;
+  color: #F3F4F6;
+}
+
+#root {
+  width: 100%;
+  min-height: 100vh;
+}
+
+/* Ant Design dark theme overrides */
+.ant-table {
+  background: #171A23 !important;
+}
+
+.ant-table-thead > tr > th {
+  background: #1E222E !important;
+  color: #F3F4F6 !important;
+  border-bottom: 1px solid #374151 !important;
+}
+
+.ant-table-tbody > tr > td {
+  border-bottom: 1px solid #1E222E !important;
+}
+
+.ant-table-tbody > tr:hover > td {
+  background: #1E222E !important;
+}
+
+.ant-pagination-item {
+  background: #171A23 !important;
+  border-color: #374151 !important;
+}
+
+.ant-pagination-item a {
+  color: #9CA3AF !important;
+}
+
+.ant-pagination-item-active {
+  background: #5B8CFF !important;
+  border-color: #5B8CFF !important;
+}
+
+.ant-pagination-item-active a {
+  color: #FFFFFF !important;
+}
+
+.ant-menu-dark .ant-menu-item-selected {
+  background: #1E222E !important;
+  color: #5B8CFF !important;
+}
+
+.ant-menu-dark .ant-menu-item-selected .anticon {
+  color: #5B8CFF !important;
+}

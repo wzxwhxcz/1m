@@ -1,0 +1,54 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    cluster: 'contextproxy'
+    replica: '1'
+
+scrape_configs:
+  # Go Proxy instances
+  - job_name: 'go-proxy'
+    static_configs:
+      - targets:
+          - 'go-proxy-1:8080'
+          - 'go-proxy-2:8080'
+          - 'go-proxy-3:8080'
+        labels:
+          service: 'proxy'
+    metrics_path: '/metrics'
+    scrape_interval: 5s
+
+  # Python Recall instances
+  - job_name: 'python-recall'
+    static_configs:
+      - targets:
+          - 'python-recall-1:8000'
+          - 'python-recall-2:8000'
+        labels:
+          service: 'recall'
+    metrics_path: '/metrics'
+    scrape_interval: 10s
+
+  # PostgreSQL exporter (optional, if installed)
+  - job_name: 'postgres'
+    static_configs:
+      - targets:
+          - 'postgres:5432'
+        labels:
+          service: 'database'
+
+  # Redis exporter (optional, if installed)
+  - job_name: 'redis'
+    static_configs:
+      - targets:
+          - 'redis:6379'
+        labels:
+          service: 'cache'
+
+  # Nginx
+  - job_name: 'nginx'
+    static_configs:
+      - targets:
+          - 'nginx:80'
+        labels:
+          service: 'loadbalancer'

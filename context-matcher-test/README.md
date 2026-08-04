@@ -48,6 +48,52 @@
 | BM25 Only | 67% | 40ms | 中等 |
 | Hybrid DAT | 100% | 100ms | 复杂 |
 
+---
+
+## 🚀 快速开始
+
+### 安装
+
+```bash
+git clone https://github.com/wzxwhxcz/1m.git
+cd 1m/context-matcher-test
+pip install -r requirements.txt
+```
+
+### 启动API服务器
+
+```bash
+python -m uvicorn src.api_server:app --host 0.0.0.0 --port 8000
+```
+
+### 使用无状态召回API（推荐）
+
+```python
+import requests
+
+# 准备数据
+messages = [
+    {"content": "How do I prevent re-renders in React?", "role": "user"},
+    {"content": "How to load CSV with pandas?", "role": "user"},
+    # ... 更多消息
+]
+
+# 一步式召回
+response = requests.post("http://localhost:8000/api/v1/recall", json={
+    "messages": messages,
+    "query": "React performance optimization tips?",
+    "k": 50,
+    "algorithm": "car"  # 或 "dense"
+})
+
+result = response.json()
+print(f"召回 {result['recalled_count']} 条消息")
+print(f"延迟: {result['latency_ms']:.2f}ms")
+
+for msg in result['recalled_messages']:
+    print(f"[{msg['similarity']:.3f}] {msg['content']}")
+```
+
 **结论**: 最简单的方案在中小规模（<10万条消息）下性能最优
 
 ---

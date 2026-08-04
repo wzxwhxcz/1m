@@ -1,0 +1,32 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  # Rust Proxy Services
+  - job_name: 'rust-proxy'
+    static_configs:
+      - targets:
+          - 'rust-proxy-1:8080'
+          - 'rust-proxy-2:8080'
+          - 'rust-proxy-3:8080'
+    metrics_path: '/metrics'
+
+  # Rust Recall Services
+  - job_name: 'rust-recall'
+    static_configs:
+      - targets:
+          - 'rust-recall-1:9100'
+          - 'rust-recall-2:9100'
+    metrics_path: '/metrics'
+
+  # Nginx
+  - job_name: 'nginx'
+    static_configs:
+      - targets: ['nginx:80']
+    metrics_path: '/nginx_status'
+
+  # Prometheus self-monitoring
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']

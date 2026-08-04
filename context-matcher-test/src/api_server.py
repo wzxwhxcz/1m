@@ -8,7 +8,7 @@ from pydantic import BaseModel, Field
 from typing import List, Dict, Optional
 import asyncio
 import uvicorn
-from production_service import (
+from src.production_service import (
     ProductionContextService, 
     CacheBackend,
     HealthStatus,
@@ -82,6 +82,25 @@ class MetricsResponse(BaseModel):
     cache_hit_rate: float
 
 
+class RecallRequest(BaseModel):
+    """无状态召回请求（新版API）"""
+    messages: List[Message] = Field(..., description="完整消息列表")
+    query: str = Field(..., description="当前查询")
+    k: int = Field(default=50, ge=1, le=500, description="召回数量")
+    algorithm: str = Field(default="car", description="算法类型: car/dense/hybrid")
+    n_clusters: int = Field(default=10, ge=2, le=50, description="聚类数量（仅CAR算法使用）")
+
+
+class RecallResponse(BaseModel):
+    """无状态召回响应（新版API）"""
+    recalled_messages: List[Dict]
+    original_count: int
+    recalled_count: int
+    latency_ms: float
+    algorithm_used: str
+    cache_hit_rate: float
+
+
 # ============ 生命周期事件 ============
 
 @app.on_event("startup")
@@ -126,6 +145,7 @@ async def root():
         "endpoints": {
             "health": "/health",
             "metrics": "/metrics",
+            "recall": "/api/v1/recall",
             "build_clusters": "/api/v1/clusters/build",
             "retrieve": "/api/v1/retrieve",
             "docs": "/docs"
@@ -263,6 +283,88 @@ async def retrieve_context(request: RetrievalRequest):
             query=request.query,
             results=formatted_results,
             latency_ms=latency,
+            cache_hit_rate=health["cache_hit_rate"]
+        )
+    
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"召回失败: {str(e)}")
+
+
+@app.post("/api/v1/recall", response_model=RecallResponse, tags=["Retrieval"])
+async def recall_messages(request: RecallRequest):
+    """
+    无状态召回接口（推荐使用）
+    
+    - **messages**: 完整消息列表
+    - **query**: 当前查询
+    - **k**: 召回数量（1-500）
+    - **algorithm**: 算法类型（car/dense/hybrid）
+    - **n_clusters**: 聚类数量（仅CAR使用）
+    
+    一步式无状态召回，无需预先构建聚类
+    """
+    if not service:
+        raise HTTPException(status_code=503, detail="服务未初始化")
+    
+    import time
+    start_time = time.time()
+    
+    try:
+        # 转换消息格式
+        messages_dict = [msg.dict() for msg in request.messages]
+        
+        # 根据算法类型执行召回
+        if request.algorithm == "car":
+            # CAR算法：构建聚类 + 召回
+            await service.build_clusters_async(messages_dict, n_clusters=request.n_clusters)
+            results, _ = await service.car_retrieval_async(request.query, messages_dict, k=request.k)
+            
+        elif request.algorithm == "dense":
+            # Dense Only：纯向量检索
+            query_emb = await service.embed_cached(request.query)
+            msg_embeddings = []
+            for msg in messages_dict:
+                emb = await service.embed_cached(msg["content"])
+                msg_embeddings.append(emb)
+            
+            # 计算相似度
+            import numpy as np
+            from sklearn.metrics.pairwise import cosine_similarity
+            
+            similarities = cosine_similarity([query_emb], msg_embeddings)[0]
+            top_indices = np.argsort(similarities)[::-1][:request.k]
+            
+            results = [
+                (messages_dict[idx], float(similarities[idx]), int(idx))
+                for idx in top_indices
+            ]
+            
+        else:
+            raise HTTPException(status_code=400, detail=f"不支持的算法: {request.algorithm}")
+        
+        # 格式化结果
+        recalled_messages = []
+        for msg, score, idx in results:
+            recalled_messages.append({
+                "index": int(idx),
+                "content": msg["content"],
+                "role": msg.get("role", "user"),
+                "topic": msg.get("topic"),
+                "similarity": float(score)
+            })
+        
+        # 计算延迟
+        latency_ms = (time.time() - start_time) * 1000
+        
+        # 获取缓存命中率
+        health = service.get_health()
+        
+        return RecallResponse(
+            recalled_messages=recalled_messages,
+            original_count=len(request.messages),
+            recalled_count=len(recalled_messages),
+            latency_ms=latency_ms,
+            algorithm_used=request.algorithm,
             cache_hit_rate=health["cache_hit_rate"]
         )
     
