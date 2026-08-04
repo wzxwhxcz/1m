@@ -79,7 +79,7 @@ pub async fn chat_completions_handler(
     let response_body = if request.stream {
         // Streaming response
         let stream = state.proxy_service
-            .proxy_request(&upstream_url, &api_key, request)
+            .proxy_request(&upstream_url, &api_key, request, None)
             .await?;
 
         return Ok((

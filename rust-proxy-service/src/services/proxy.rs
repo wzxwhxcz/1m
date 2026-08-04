@@ -107,4 +107,14 @@ impl ProxyService {
 
         Ok(body)
     }
+
+    // 兼容旧代码的 forward_request 方法
+    pub async fn forward_request(
+        &self,
+        upstream_url: &str,
+        request_body: &ChatRequest,
+        api_key: String,
+    ) -> Result<String> {
+        self.proxy_non_stream(upstream_url, &api_key, request_body.clone(), None).await
+    }
 }

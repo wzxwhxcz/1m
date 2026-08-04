@@ -94,4 +94,17 @@ impl RecallService {
         }
         false
     }
+
+    // 兼容旧代码的 recall_messages 方法
+    pub async fn recall_messages(
+        &self,
+        messages: &[Message],
+        query: String,
+        k: usize,
+        _algorithm: &str,
+        _threshold: usize,
+    ) -> Result<Vec<Message>> {
+        let response = self.recall(messages.to_vec(), query, k).await?;
+        Ok(response.recalled_messages)
+    }
 }

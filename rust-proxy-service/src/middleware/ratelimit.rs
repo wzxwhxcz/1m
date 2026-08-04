@@ -9,18 +9,14 @@ use crate::error::{ProxyError, Result};
 pub struct RateLimitMiddleware;
 
 impl RateLimitMiddleware {
-    pub fn new(requests_per_minute: u64) -> GovernorLayer<'static> {
-        let config = Box::new(
-            GovernorConfigBuilder::default()
-                .per_second(requests_per_minute / 60)
-                .burst_size(requests_per_minute as u32)
-                .finish()
-                .unwrap()
-        );
+    pub fn layer(requests_per_minute: u64) -> GovernorLayer<impl tower_governor::key_extractor::KeyExtractor, tower_governor::governor::DefaultDirectRateLimiter> {
+        let config = GovernorConfigBuilder::default()
+            .per_second(requests_per_minute / 60)
+            .burst_size(requests_per_minute as u32)
+            .finish()
+            .unwrap();
 
-        GovernorLayer {
-            config: Box::leak(config),
-        }
+        GovernorLayer { config: Box::leak(Box::new(config)) }
     }
 }
 

@@ -18,6 +18,16 @@ lazy_static::lazy_static! {
         "Total number of times recall was triggered"
     ).unwrap();
     
+    pub static ref REQUESTS_SUCCESS: IntCounter = IntCounter::new(
+        "proxy_requests_success_total",
+        "Total number of successful requests"
+    ).unwrap();
+    
+    pub static ref REQUESTS_FAILED: IntCounter = IntCounter::new(
+        "proxy_requests_failed_total",
+        "Total number of failed requests"
+    ).unwrap();
+    
     pub static ref AUTH_FAILURES: IntCounter = IntCounter::new(
         "proxy_auth_failures_total",
         "Total number of authentication failures"
@@ -38,6 +48,11 @@ lazy_static::lazy_static! {
             .buckets(vec![0.01, 0.05, 0.1, 0.25, 0.5, 1.0, 2.0, 5.0])
     ).unwrap();
     
+    pub static ref RECALL_LATENCY: Histogram = Histogram::with_opts(
+        HistogramOpts::new("proxy_recall_latency_seconds", "Recall latency")
+            .buckets(vec![0.01, 0.05, 0.1, 0.25, 0.5, 1.0, 2.0, 5.0])
+    ).unwrap();
+    
     pub static ref UPSTREAM_DURATION: Histogram = Histogram::with_opts(
         HistogramOpts::new("proxy_upstream_duration_seconds", "Upstream API duration")
             .buckets(vec![0.1, 0.5, 1.0, 2.0, 5.0, 10.0, 20.0])
@@ -48,10 +63,13 @@ pub fn init_metrics() {
     REGISTRY.register(Box::new(REQUESTS_TOTAL.clone())).unwrap();
     REGISTRY.register(Box::new(ERRORS_TOTAL.clone())).unwrap();
     REGISTRY.register(Box::new(RECALL_TRIGGERED.clone())).unwrap();
+    REGISTRY.register(Box::new(REQUESTS_SUCCESS.clone())).unwrap();
+    REGISTRY.register(Box::new(REQUESTS_FAILED.clone())).unwrap();
     REGISTRY.register(Box::new(AUTH_FAILURES.clone())).unwrap();
     REGISTRY.register(Box::new(RATE_LIMIT_EXCEEDED.clone())).unwrap();
     REGISTRY.register(Box::new(REQUEST_DURATION.clone())).unwrap();
     REGISTRY.register(Box::new(RECALL_DURATION.clone())).unwrap();
+    REGISTRY.register(Box::new(RECALL_LATENCY.clone())).unwrap();
     REGISTRY.register(Box::new(UPSTREAM_DURATION.clone())).unwrap();
 }
 

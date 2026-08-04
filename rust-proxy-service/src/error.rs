@@ -20,6 +20,12 @@ pub enum ProxyError {
     #[error("Invalid service key")]
     InvalidServiceKey,
     
+    #[error("Bad request: {0}")]
+    BadRequest(String),
+    
+    #[error("Unauthorized: {0}")]
+    Unauthorized(String),
+    
     #[error("Rate limit exceeded")]
     RateLimitExceeded,
     
@@ -39,6 +45,8 @@ impl IntoResponse for ProxyError {
     fn into_response(self) -> Response {
         let (status, message) = match self {
             ProxyError::InvalidServiceKey => (StatusCode::UNAUTHORIZED, self.to_string()),
+            ProxyError::BadRequest(_) => (StatusCode::BAD_REQUEST, self.to_string()),
+            ProxyError::Unauthorized(_) => (StatusCode::UNAUTHORIZED, self.to_string()),
             ProxyError::RateLimitExceeded => (StatusCode::TOO_MANY_REQUESTS, self.to_string()),
             ProxyError::InvalidUrl(_) => (StatusCode::BAD_REQUEST, self.to_string()),
             ProxyError::Upstream(_) => (StatusCode::BAD_GATEWAY, self.to_string()),
