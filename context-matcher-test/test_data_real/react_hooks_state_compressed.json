@@ -1,0 +1,222 @@
+{
+  "truncate": [
+    {
+      "role": "user",
+      "content": "Okay, but if I use an object, how do I update just one field?"
+    },
+    {
+      "role": "assistant",
+      "content": "You need to use the spread operator to preserve other fields:\n\n [code omitted]"
+    },
+    {
+      "role": "user",
+      "content": "What about arrays? How do I add an item to an array in state?"
+    },
+    {
+      "role": "assistant",
+      "content": "Here are the common array operations:\n\n [code omitted]"
+    },
+    {
+      "role": "user",
+      "content": "Why can't I mutate state directly?"
+    },
+    {
+      "role": "assistant",
+      "content": "React uses shallow comparison to detect changes. If you mutate state directly:\n\n [code omitted]"
+    },
+    {
+      "role": "user",
+      "content": "Got it! One more thing - when should I use useReducer instead of useState?"
+    },
+    {
+      "role": "assistant",
+      "content": "Use `useReducer` when:\n\n1. **Complex state logic** with multiple sub-values\n2. **Next state depends on previous state**\n3. **Multiple related updates**\n\n [code omitted]"
+    },
+    {
+      "role": "user",
+      "content": "Perfect! This really clarifies things. Thank you!"
+    },
+    {
+      "role": "assistant",
+      "content": "You're welcome! Here's a quick cheat sheet:\n\n**useState:**\n- Simple state\n- Independent values\n- Easy to understand\n\n**useReducer:**\n- Complex state logic\n- Multiple related actions\n- Easier to test\n\n**State updates:**\n- Always immutable\n- Use spread operator\n- Functional form for dependent updates\n\nHappy coding! 🚀"
+    }
+  ],
+  "summarize": [
+    {
+      "role": "system",
+      "content": "You are a helpful programming assistant."
+    },
+    {
+      "role": "system",
+      "content": "[Previous conversation summary: User was working on React Hooks useState using various technologies. Discussed code files.]"
+    },
+    {
+      "role": "system",
+      "content": "You are a helpful programming assistant."
+    },
+    {
+      "role": "user",
+      "content": "I'm confused about React useState. When should I use multiple useState vs one useState with an object?"
+    },
+    {
+      "role": "assistant",
+      "content": "Great question! Here are the guidelines:\n\n**Use multiple useState when:**\n- Values are independent\n- You update them separately\n- Simple primitive values\n\n [code omitted]"
+    },
+    {
+      "role": "user",
+      "content": "Okay, but if I use an object, how do I update just one field?"
+    },
+    {
+      "role": "assistant",
+      "content": "You need to use the spread operator to preserve other fields:\n\n [code omitted]"
+    },
+    {
+      "role": "user",
+      "content": "What about arrays? How do I add an item to an array in state?"
+    },
+    {
+      "role": "assistant",
+      "content": "Here are the common array operations:\n\n [code omitted]"
+    },
+    {
+      "role": "user",
+      "content": "Why can't I mutate state directly?"
+    },
+    {
+      "role": "assistant",
+      "content": "React uses shallow comparison to detect changes. If you mutate state directly:\n\n [code omitted]"
+    },
+    {
+      "role": "user",
+      "content": "Got it! One more thing - when should I use useReducer instead of useState?"
+    },
+    {
+      "role": "assistant",
+      "content": "Use `useReducer` when:\n\n1. **Complex state logic** with multiple sub-values\n2. **Next state depends on previous state**\n3. **Multiple related updates**\n\n [code omitted]"
+    },
+    {
+      "role": "user",
+      "content": "Perfect! This really clarifies things. Thank you!"
+    },
+    {
+      "role": "assistant",
+      "content": "You're welcome! Here's a quick cheat sheet:\n\n**useState:**\n- Simple state\n- Independent values\n- Easy to understand\n\n**useReducer:**\n- Complex state logic\n- Multiple related actions\n- Easier to test\n\n**State updates:**\n- Always immutable\n- Use spread operator\n- Functional form for dependent updates\n\nHappy coding! 🚀"
+    }
+  ],
+  "remove_code": [
+    {
+      "role": "system",
+      "content": "You are a helpful programming assistant."
+    },
+    {
+      "role": "user",
+      "content": "I'm confused about React useState. When should I use multiple useState vs one useState with an object?"
+    },
+    {
+      "role": "assistant",
+      "content": "Great question! Here are the guidelines:\n\n**Use multiple useState when:**\n- Values are independent\n- You update them separately\n- Simple primitive values\n\n [code removed]"
+    },
+    {
+      "role": "user",
+      "content": "Okay, but if I use an object, how do I update just one field?"
+    },
+    {
+      "role": "assistant",
+      "content": "You need to use the spread operator to preserve other fields:\n\n [code removed]"
+    },
+    {
+      "role": "user",
+      "content": "What about arrays? How do I add an item to an array in state?"
+    },
+    {
+      "role": "assistant",
+      "content": "Here are the common array operations:\n\n [code removed]"
+    },
+    {
+      "role": "user",
+      "content": "Why can't I mutate state directly?"
+    },
+    {
+      "role": "assistant",
+      "content": "React uses shallow comparison to detect changes. If you mutate state directly:\n\n [code removed]"
+    },
+    {
+      "role": "user",
+      "content": "Got it! One more thing - when should I use useReducer instead of useState?"
+    },
+    {
+      "role": "assistant",
+      "content": "Use `useReducer` when:\n\n1. **Complex state logic** with multiple sub-values\n2. **Next state depends on previous state**\n3. **Multiple related updates**\n\n [code removed]"
+    },
+    {
+      "role": "user",
+      "content": "Perfect! This really clarifies things. Thank you!"
+    },
+    {
+      "role": "assistant",
+      "content": "You're welcome! Here's a quick cheat sheet:\n\n**useState:**\n- Simple state\n- Independent values\n- Easy to understand\n\n**useReducer:**\n- Complex state logic\n- Multiple related actions\n- Easier to test\n\n**State updates:**\n- Always immutable\n- Use spread operator\n- Functional form for dependent updates\n\nHappy coding! 🚀"
+    }
+  ],
+  "mixed": [
+    {
+      "role": "system",
+      "content": "You are a helpful programming assistant."
+    },
+    {
+      "role": "system",
+      "content": "Summary: Working on React Hooks useState with various technologies."
+    },
+    {
+      "role": "system",
+      "content": "You are a helpful programming assistant."
+    },
+    {
+      "role": "user",
+      "content": "I'm confused about React useState. When should I use multiple useState vs one useState with an object?"
+    },
+    {
+      "role": "assistant",
+      "content": "Great question! Here are the guidelines:\n\n**Use multiple useState when:**\n- Values are independent\n- You update them separately\n- Simple primitive values\n\n [code omitted]"
+    },
+    {
+      "role": "user",
+      "content": "Okay, but if I use an object, how do I update just one field?"
+    },
+    {
+      "role": "assistant",
+      "content": "You need to use the spread operator to preserve other fields:\n\n [code omitted]"
+    },
+    {
+      "role": "user",
+      "content": "What about arrays? How do I add an item to an array in state?"
+    },
+    {
+      "role": "assistant",
+      "content": "Here are the common array operations:\n\n [code omitted]"
+    },
+    {
+      "role": "user",
+      "content": "Why can't I mutate state directly?"
+    },
+    {
+      "role": "assistant",
+      "content": "React uses shallow comparison to detect changes. If you mutate state directly:\n\n [code omitted]"
+    },
+    {
+      "role": "user",
+      "content": "Got it! One more thing - when should I use useReducer instead of useState?"
+    },
+    {
+      "role": "assistant",
+      "content": "Use `useReducer` when:\n\n1. **Complex state logic** with multiple sub-values\n2. **Next state depends on previous state**\n3. **Multiple related updates**\n\n [code omitted]"
+    },
+    {
+      "role": "user",
+      "content": "Perfect! This really clarifies things. Thank you!"
+    },
+    {
+      "role": "assistant",
+      "content": "You're welcome! Here's a quick cheat sheet:\n\n**useState:**\n- Simple state\n- Independent values\n- Easy to understand\n\n**useReducer:**\n- Complex state logic\n- Multiple related actions\n- Easier to test\n\n**State updates:**\n- Always immutable\n- Use spread operator\n- Functional form for dependent updates\n\nHappy coding! 🚀"
+    }
+  ]
+}

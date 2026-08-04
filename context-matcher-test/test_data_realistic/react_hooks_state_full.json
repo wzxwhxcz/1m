@@ -1,0 +1,58 @@
+{
+  "id": "react_hooks_state",
+  "topic": "React Hooks useState",
+  "messages": [
+    {
+      "role": "system",
+      "content": "You are a helpful programming assistant."
+    },
+    {
+      "role": "user",
+      "content": "I'm confused about React useState. When should I use multiple useState vs one useState with an object?"
+    },
+    {
+      "role": "assistant",
+      "content": "Great question! Here are the guidelines:\n\n**Use multiple useState when:**\n- Values are independent\n- You update them separately\n- Simple primitive values\n\n```jsx\nconst [name, setName] = useState('');\nconst [age, setAge] = useState(0);\nconst [email, setEmail] = useState('');\n```\n\n**Use single useState with object when:**\n- Values are related\n- Often updated together\n- Represent a single entity\n\n```jsx\nconst [user, setUser] = useState({\n  name: '',\n  age: 0,\n  email: ''\n});\n```"
+    },
+    {
+      "role": "user",
+      "content": "Okay, but if I use an object, how do I update just one field?"
+    },
+    {
+      "role": "assistant",
+      "content": "You need to use the spread operator to preserve other fields:\n\n```jsx\n// ❌ Wrong - overwrites entire object\nsetUser({ name: 'John' });\n\n// ✅ Correct - merges with existing state\nsetUser(prev => ({\n  ...prev,\n  name: 'John'\n}));\n\n// Or with multiple fields\nsetUser(prev => ({\n  ...prev,\n  name: 'John',\n  age: 30\n}));\n```\n\nAlways use the functional update form when the new state depends on the previous state!"
+    },
+    {
+      "role": "user",
+      "content": "What about arrays? How do I add an item to an array in state?"
+    },
+    {
+      "role": "assistant",
+      "content": "Here are the common array operations:\n\n```jsx\nconst [items, setItems] = useState([]);\n\n// Add item to end\nsetItems(prev => [...prev, newItem]);\n\n// Add item to beginning\nsetItems(prev => [newItem, ...prev]);\n\n// Remove item by id\nsetItems(prev => prev.filter(item => item.id !== idToRemove));\n\n// Update item\nsetItems(prev => prev.map(item => \n  item.id === targetId \n    ? { ...item, field: newValue }\n    : item\n));\n\n// Replace entire array\nsetItems(newArray);\n```\n\nNever mutate state directly with `.push()`, `.splice()`, etc!"
+    },
+    {
+      "role": "user",
+      "content": "Why can't I mutate state directly?"
+    },
+    {
+      "role": "assistant",
+      "content": "React uses shallow comparison to detect changes. If you mutate state directly:\n\n```jsx\n// ❌ This won't trigger re-render!\nconst [items, setItems] = useState([1, 2, 3]);\nitems.push(4);\nsetItems(items); // Same reference!\n```\n\nReact sees the same array reference and thinks nothing changed, so it doesn't re-render.\n\n```jsx\n// ✅ This creates new reference\nsetItems([...items, 4]); // New array!\n```\n\nAlways create a new array/object when updating state."
+    },
+    {
+      "role": "user",
+      "content": "Got it! One more thing - when should I use useReducer instead of useState?"
+    },
+    {
+      "role": "assistant",
+      "content": "Use `useReducer` when:\n\n1. **Complex state logic** with multiple sub-values\n2. **Next state depends on previous state**\n3. **Multiple related updates**\n\n```jsx\nconst reducer = (state, action) => {\n  switch (action.type) {\n    case 'INCREMENT':\n      return { count: state.count + 1 };\n    case 'DECREMENT':\n      return { count: state.count - 1 };\n    case 'RESET':\n      return { count: 0 };\n    default:\n      return state;\n  }\n};\n\nconst [state, dispatch] = useReducer(reducer, { count: 0 });\n\n// Usage\ndispatch({ type: 'INCREMENT' });\n```\n\n`useState` is simpler for most cases. `useReducer` shines when you have complex state transitions."
+    },
+    {
+      "role": "user",
+      "content": "Perfect! This really clarifies things. Thank you!"
+    },
+    {
+      "role": "assistant",
+      "content": "You're welcome! Here's a quick cheat sheet:\n\n**useState:**\n- Simple state\n- Independent values\n- Easy to understand\n\n**useReducer:**\n- Complex state logic\n- Multiple related actions\n- Easier to test\n\n**State updates:**\n- Always immutable\n- Use spread operator\n- Functional form for dependent updates\n\nHappy coding! 🚀"
+    }
+  ]
+}

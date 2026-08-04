@@ -1,0 +1,222 @@
+{
+  "truncate": [
+    {
+      "role": "user",
+      "content": "How do I run an async function?"
+    },
+    {
+      "role": "assistant",
+      "content": "You need an event loop:\n\n [code omitted]"
+    },
+    {
+      "role": "user",
+      "content": "Can I run multiple async functions at once?"
+    },
+    {
+      "role": "assistant",
+      "content": "Yes! That's the power of async:\n\n [code omitted]"
+    },
+    {
+      "role": "user",
+      "content": "What's the difference between asyncio.gather() and asyncio.create_task()?"
+    },
+    {
+      "role": "assistant",
+      "content": "Good question!\n\n**asyncio.gather():**\n- Waits for all to complete\n- Returns results in order\n- If one fails, others continue (with return_exceptions=True)\n\n [code omitted]"
+    },
+    {
+      "role": "user",
+      "content": "Can I use async with regular synchronous code?"
+    },
+    {
+      "role": "assistant",
+      "content": "Yes, but be careful:\n\n [code omitted]"
+    },
+    {
+      "role": "user",
+      "content": "This is super helpful! Any common mistakes to avoid?"
+    },
+    {
+      "role": "assistant",
+      "content": "Yes! Here are the top mistakes:\n\n**1. Forgetting await:**\n [code omitted]"
+    }
+  ],
+  "summarize": [
+    {
+      "role": "system",
+      "content": "You are a helpful programming assistant."
+    },
+    {
+      "role": "system",
+      "content": "[Previous conversation summary: User was working on Python Async/Await using various technologies. Discussed code files.]"
+    },
+    {
+      "role": "system",
+      "content": "You are a helpful programming assistant."
+    },
+    {
+      "role": "user",
+      "content": "I keep seeing async/await in Python code. What exactly is it and when should I use it?"
+    },
+    {
+      "role": "assistant",
+      "content": "`async`/`await` enables concurrent programming in Python. Use it for I/O-bound operations:\n\n [code omitted]"
+    },
+    {
+      "role": "user",
+      "content": "How do I run an async function?"
+    },
+    {
+      "role": "assistant",
+      "content": "You need an event loop:\n\n [code omitted]"
+    },
+    {
+      "role": "user",
+      "content": "Can I run multiple async functions at once?"
+    },
+    {
+      "role": "assistant",
+      "content": "Yes! That's the power of async:\n\n [code omitted]"
+    },
+    {
+      "role": "user",
+      "content": "What's the difference between asyncio.gather() and asyncio.create_task()?"
+    },
+    {
+      "role": "assistant",
+      "content": "Good question!\n\n**asyncio.gather():**\n- Waits for all to complete\n- Returns results in order\n- If one fails, others continue (with return_exceptions=True)\n\n [code omitted]"
+    },
+    {
+      "role": "user",
+      "content": "Can I use async with regular synchronous code?"
+    },
+    {
+      "role": "assistant",
+      "content": "Yes, but be careful:\n\n [code omitted]"
+    },
+    {
+      "role": "user",
+      "content": "This is super helpful! Any common mistakes to avoid?"
+    },
+    {
+      "role": "assistant",
+      "content": "Yes! Here are the top mistakes:\n\n**1. Forgetting await:**\n [code omitted]"
+    }
+  ],
+  "remove_code": [
+    {
+      "role": "system",
+      "content": "You are a helpful programming assistant."
+    },
+    {
+      "role": "user",
+      "content": "I keep seeing async/await in Python code. What exactly is it and when should I use it?"
+    },
+    {
+      "role": "assistant",
+      "content": "`async`/`await` enables concurrent programming in Python. Use it for I/O-bound operations:\n\n [code removed]"
+    },
+    {
+      "role": "user",
+      "content": "How do I run an async function?"
+    },
+    {
+      "role": "assistant",
+      "content": "You need an event loop:\n\n [code removed]"
+    },
+    {
+      "role": "user",
+      "content": "Can I run multiple async functions at once?"
+    },
+    {
+      "role": "assistant",
+      "content": "Yes! That's the power of async:\n\n [code removed]"
+    },
+    {
+      "role": "user",
+      "content": "What's the difference between asyncio.gather() and asyncio.create_task()?"
+    },
+    {
+      "role": "assistant",
+      "content": "Good question!\n\n**asyncio.gather():**\n- Waits for all to complete\n- Returns results in order\n- If one fails, others continue (with return_exceptions=True)\n\n [code removed]"
+    },
+    {
+      "role": "user",
+      "content": "Can I use async with regular synchronous code?"
+    },
+    {
+      "role": "assistant",
+      "content": "Yes, but be careful:\n\n [code removed]"
+    },
+    {
+      "role": "user",
+      "content": "This is super helpful! Any common mistakes to avoid?"
+    },
+    {
+      "role": "assistant",
+      "content": "Yes! Here are the top mistakes:\n\n**1. Forgetting await:**\n [code removed]"
+    }
+  ],
+  "mixed": [
+    {
+      "role": "system",
+      "content": "You are a helpful programming assistant."
+    },
+    {
+      "role": "system",
+      "content": "Summary: Working on Python Async/Await with various technologies."
+    },
+    {
+      "role": "system",
+      "content": "You are a helpful programming assistant."
+    },
+    {
+      "role": "user",
+      "content": "I keep seeing async/await in Python code. What exactly is it and when should I use it?"
+    },
+    {
+      "role": "assistant",
+      "content": "`async`/`await` enables concurrent programming in Python. Use it for I/O-bound operations:\n\n [code omitted]"
+    },
+    {
+      "role": "user",
+      "content": "How do I run an async function?"
+    },
+    {
+      "role": "assistant",
+      "content": "You need an event loop:\n\n [code omitted]"
+    },
+    {
+      "role": "user",
+      "content": "Can I run multiple async functions at once?"
+    },
+    {
+      "role": "assistant",
+      "content": "Yes! That's the power of async:\n\n [code omitted]"
+    },
+    {
+      "role": "user",
+      "content": "What's the difference between asyncio.gather() and asyncio.create_task()?"
+    },
+    {
+      "role": "assistant",
+      "content": "Good question!\n\n**asyncio.gather():**\n- Waits for all to complete\n- Returns results in order\n- If one fails, others continue (with return_exceptions=True)\n\n [code omitted]"
+    },
+    {
+      "role": "user",
+      "content": "Can I use async with regular synchronous code?"
+    },
+    {
+      "role": "assistant",
+      "content": "Yes, but be careful:\n\n [code omitted]"
+    },
+    {
+      "role": "user",
+      "content": "This is super helpful! Any common mistakes to avoid?"
+    },
+    {
+      "role": "assistant",
+      "content": "Yes! Here are the top mistakes:\n\n**1. Forgetting await:**\n [code omitted]"
+    }
+  ]
+}

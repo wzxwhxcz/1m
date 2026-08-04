@@ -1,0 +1,90 @@
+{
+  "llm_compact_20": [
+    {
+      "role": "system",
+      "content": "You are a helpful programming assistant."
+    },
+    {
+      "role": "assistant",
+      "content": "[Conversation Summary]\n\nTechnologies discussed: React\n\nThe user asked 5 questions over 9 messages.\n\nKey decisions made:\n- i'm confused about react usestate\n- great question! here are the guidelines:\n\n**use multiple usestate when:**\n- values are independent\n-\n- okay, but if i use an object, how do i update just one field?\n\nMost recent topics:\n- What about arrays? How do I add an item to an array in state?\n- Why can't I mutate state directly?\n\n[Continuing from here with full message history...]"
+    },
+    {
+      "role": "assistant",
+      "content": "Use `useReducer` when:\n\n1. **Complex state logic** with multiple sub-values\n2. **Next state depends on previous state**\n3. **Multiple related updates**\n\n```jsx\nconst reducer = (state, action) => {\n  switch (action.type) {\n    case 'INCREMENT':\n      return { count: state.count + 1 };\n    case 'DECREMENT':\n      return { count: state.count - 1 };\n    case 'RESET':\n      return { count: 0 };\n    default:\n      return state;\n  }\n};\n\nconst [state, dispatch] = useReducer(reducer, { count: 0 });\n\n// Usage\ndispatch({ type: 'INCREMENT' });\n```\n\n`useState` is simpler for most cases. `useReducer` shines when you have complex state transitions."
+    },
+    {
+      "role": "user",
+      "content": "Perfect! This really clarifies things. Thank you!"
+    },
+    {
+      "role": "assistant",
+      "content": "You're welcome! Here's a quick cheat sheet:\n\n**useState:**\n- Simple state\n- Independent values\n- Easy to understand\n\n**useReducer:**\n- Complex state logic\n- Multiple related actions\n- Easier to test\n\n**State updates:**\n- Always immutable\n- Use spread operator\n- Functional form for dependent updates\n\nHappy coding! 🚀"
+    }
+  ],
+  "llm_compact_15": [
+    {
+      "role": "system",
+      "content": "You are a helpful programming assistant."
+    },
+    {
+      "role": "assistant",
+      "content": "[Conversation Summary]\n\nTechnologies discussed: React\n\nThe user asked 5 questions over 9 messages.\n\nKey decisions made:\n- i'm confused about react usestate\n- great question! here are the guidelines:\n\n**use multiple usestate when:**\n- values are independent\n-\n- okay, but if i use an object, how do i update just one field?\n\nMost recent topics:\n- What about arrays? How do I add an item to an array in state?\n- Why can't I mutate state directly?\n\n[Continuing from here with full message history...]"
+    },
+    {
+      "role": "assistant",
+      "content": "Use `useReducer` when:\n\n1. **Complex state logic** with multiple sub-values\n2. **Next state depends on previous state**\n3. **Multiple related updates**\n\n```jsx\nconst reducer = (state, action) => {\n  switch (action.type) {\n    case 'INCREMENT':\n      return { count: state.count + 1 };\n    case 'DECREMENT':\n      return { count: state.count - 1 };\n    case 'RESET':\n      return { count: 0 };\n    default:\n      return state;\n  }\n};\n\nconst [state, dispatch] = useReducer(reducer, { count: 0 });\n\n// Usage\ndispatch({ type: 'INCREMENT' });\n```\n\n`useState` is simpler for most cases. `useReducer` shines when you have complex state transitions."
+    },
+    {
+      "role": "user",
+      "content": "Perfect! This really clarifies things. Thank you!"
+    },
+    {
+      "role": "assistant",
+      "content": "You're welcome! Here's a quick cheat sheet:\n\n**useState:**\n- Simple state\n- Independent values\n- Easy to understand\n\n**useReducer:**\n- Complex state logic\n- Multiple related actions\n- Easier to test\n\n**State updates:**\n- Always immutable\n- Use spread operator\n- Functional form for dependent updates\n\nHappy coding! 🚀"
+    }
+  ],
+  "llm_compact_30": [
+    {
+      "role": "system",
+      "content": "You are a helpful programming assistant."
+    },
+    {
+      "role": "assistant",
+      "content": "[Conversation Summary]\n\nTechnologies discussed: React\n\nThe user asked 5 questions over 9 messages.\n\nKey decisions made:\n- i'm confused about react usestate\n- great question! here are the guidelines:\n\n**use multiple usestate when:**\n- values are independent\n-\n- okay, but if i use an object, how do i update just one field?\n\nMost recent topics:\n- What about arrays? How do I add an item to an array in state?\n- Why can't I mutate state directly?\n\n[Continuing from here with full message history...]"
+    },
+    {
+      "role": "assistant",
+      "content": "Use `useReducer` when:\n\n1. **Complex state logic** with multiple sub-values\n2. **Next state depends on previous state**\n3. **Multiple related updates**\n\n```jsx\nconst reducer = (state, action) => {\n  switch (action.type) {\n    case 'INCREMENT':\n      return { count: state.count + 1 };\n    case 'DECREMENT':\n      return { count: state.count - 1 };\n    case 'RESET':\n      return { count: 0 };\n    default:\n      return state;\n  }\n};\n\nconst [state, dispatch] = useReducer(reducer, { count: 0 });\n\n// Usage\ndispatch({ type: 'INCREMENT' });\n```\n\n`useState` is simpler for most cases. `useReducer` shines when you have complex state transitions."
+    },
+    {
+      "role": "user",
+      "content": "Perfect! This really clarifies things. Thank you!"
+    },
+    {
+      "role": "assistant",
+      "content": "You're welcome! Here's a quick cheat sheet:\n\n**useState:**\n- Simple state\n- Independent values\n- Easy to understand\n\n**useReducer:**\n- Complex state logic\n- Multiple related actions\n- Easier to test\n\n**State updates:**\n- Always immutable\n- Use spread operator\n- Functional form for dependent updates\n\nHappy coding! 🚀"
+    }
+  ],
+  "aggressive_summary": [
+    {
+      "role": "system",
+      "content": "You are a helpful programming assistant."
+    },
+    {
+      "role": "assistant",
+      "content": "[Conversation Summary]\n\nTechnologies discussed: React\n\nThe user asked 5 questions over 9 messages.\n\nKey decisions made:\n- i'm confused about react usestate\n- great question! here are the guidelines:\n\n**use multiple usestate when:**\n- values are independent\n-\n- okay, but if i use an object, how do i update just one field?\n\nMost recent topics:\n- What about arrays? How do I add an item to an array in state?\n- Why can't I mutate state directly?\n\n[Continuing from here with full message history...]"
+    },
+    {
+      "role": "assistant",
+      "content": "Use `useReducer` when:\n\n1. **Complex state logic** with multiple sub-values\n2. **Next state depends on previous state**\n3. **Multiple related updates**\n\n```jsx\nconst reducer = (state, action) => {\n  switch (action.type) {\n    case 'INCREMENT':\n      return { count: state.count + 1 };\n    case 'DECREMENT':\n      return { count: state.count - 1 };\n    case 'RESET':\n      return { count: 0 };\n    default:\n      return state;\n  }\n};\n\nconst [state, dispatch] = useReducer(reducer, { count: 0 });\n\n// Usage\ndispatch({ type: 'INCREMENT' });\n```\n\n`useState` is simpler for most cases. `useReducer` shines when you have complex state transitions."
+    },
+    {
+      "role": "user",
+      "content": "Perfect! This really clarifies things. Thank you!"
+    },
+    {
+      "role": "assistant",
+      "content": "You're welcome! Here's a quick cheat sheet:\n\n**useState:**\n- Simple state\n- Independent values\n- Easy to understand\n\n**useReducer:**\n- Complex state logic\n- Multiple related actions\n- Easier to test\n\n**State updates:**\n- Always immutable\n- Use spread operator\n- Functional form for dependent updates\n\nHappy coding! 🚀"
+    }
+  ]
+}

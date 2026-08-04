@@ -1,0 +1,350 @@
+{
+  "truncate": [
+    {
+      "role": "user",
+      "content": "What if I need to add error handling? (iteration 11)"
+    },
+    {
+      "role": "assistant",
+      "content": "Here's the answer for iteration 11... [detailed code and explanation]"
+    },
+    {
+      "role": "user",
+      "content": "Can you explain that code in more detail? (iteration 12)"
+    },
+    {
+      "role": "assistant",
+      "content": "Here's the answer for iteration 12... [detailed code and explanation]"
+    },
+    {
+      "role": "user",
+      "content": "How do I deploy this? (iteration 13)"
+    },
+    {
+      "role": "assistant",
+      "content": "Here's the answer for iteration 13... [detailed code and explanation]"
+    },
+    {
+      "role": "user",
+      "content": "What are the best practices here? (iteration 14)"
+    },
+    {
+      "role": "assistant",
+      "content": "Here's the answer for iteration 14... [detailed code and explanation]"
+    },
+    {
+      "role": "user",
+      "content": "Can you show me the complete file? (iteration 15)"
+    },
+    {
+      "role": "assistant",
+      "content": "Here's the answer for iteration 15... [detailed code and explanation]"
+    }
+  ],
+  "summarize": [
+    {
+      "role": "system",
+      "content": "You are a helpful coding assistant."
+    },
+    {
+      "role": "system",
+      "content": "[Previous conversation summary: User was working on express-auth-api using express. Discussed auth.js, middleware.js.]"
+    },
+    {
+      "role": "assistant",
+      "content": "Here's the answer for iteration 8... [detailed code and explanation]"
+    },
+    {
+      "role": "user",
+      "content": "Can you explain that code in more detail? (iteration 9)"
+    },
+    {
+      "role": "assistant",
+      "content": "Here's the answer for iteration 9... [detailed code and explanation]"
+    },
+    {
+      "role": "user",
+      "content": "What if I need to add error handling? (iteration 10)"
+    },
+    {
+      "role": "assistant",
+      "content": "Here's the answer for iteration 10... [detailed code and explanation]"
+    },
+    {
+      "role": "user",
+      "content": "What if I need to add error handling? (iteration 11)"
+    },
+    {
+      "role": "assistant",
+      "content": "Here's the answer for iteration 11... [detailed code and explanation]"
+    },
+    {
+      "role": "user",
+      "content": "Can you explain that code in more detail? (iteration 12)"
+    },
+    {
+      "role": "assistant",
+      "content": "Here's the answer for iteration 12... [detailed code and explanation]"
+    },
+    {
+      "role": "user",
+      "content": "How do I deploy this? (iteration 13)"
+    },
+    {
+      "role": "assistant",
+      "content": "Here's the answer for iteration 13... [detailed code and explanation]"
+    },
+    {
+      "role": "user",
+      "content": "What are the best practices here? (iteration 14)"
+    },
+    {
+      "role": "assistant",
+      "content": "Here's the answer for iteration 14... [detailed code and explanation]"
+    },
+    {
+      "role": "user",
+      "content": "Can you show me the complete file? (iteration 15)"
+    },
+    {
+      "role": "assistant",
+      "content": "Here's the answer for iteration 15... [detailed code and explanation]"
+    }
+  ],
+  "remove_code": [
+    {
+      "role": "system",
+      "content": "You are a helpful coding assistant."
+    },
+    {
+      "role": "user",
+      "content": "I'm building an Express API with JWT authentication. Here's my current auth.js:\n [code removed]"
+    },
+    {
+      "role": "assistant",
+      "content": "I'll help you implement the login function. Here's a complete implementation:\n\n [code removed]"
+    },
+    {
+      "role": "user",
+      "content": "Great! Now how do I create middleware to protect routes?"
+    },
+    {
+      "role": "assistant",
+      "content": "Here's an authentication middleware:\n\n [code removed]"
+    },
+    {
+      "role": "user",
+      "content": "How do I use this middleware in my routes?"
+    },
+    {
+      "role": "user",
+      "content": "What are the best practices here? (iteration 1)"
+    },
+    {
+      "role": "assistant",
+      "content": "Here's the answer for iteration 1... [detailed code and explanation]"
+    },
+    {
+      "role": "user",
+      "content": "How do I write tests for this? (iteration 2)"
+    },
+    {
+      "role": "assistant",
+      "content": "Here's the answer for iteration 2... [detailed code and explanation]"
+    },
+    {
+      "role": "user",
+      "content": "How do I write tests for this? (iteration 3)"
+    },
+    {
+      "role": "assistant",
+      "content": "Here's the answer for iteration 3... [detailed code and explanation]"
+    },
+    {
+      "role": "user",
+      "content": "What are the best practices here? (iteration 4)"
+    },
+    {
+      "role": "assistant",
+      "content": "Here's the answer for iteration 4... [detailed code and explanation]"
+    },
+    {
+      "role": "user",
+      "content": "How do I write tests for this? (iteration 5)"
+    },
+    {
+      "role": "assistant",
+      "content": "Here's the answer for iteration 5... [detailed code and explanation]"
+    },
+    {
+      "role": "user",
+      "content": "Can you explain that code in more detail? (iteration 6)"
+    },
+    {
+      "role": "assistant",
+      "content": "Here's the answer for iteration 6... [detailed code and explanation]"
+    },
+    {
+      "role": "user",
+      "content": "What if I need to add error handling? (iteration 7)"
+    },
+    {
+      "role": "assistant",
+      "content": "Here's the answer for iteration 7... [detailed code and explanation]"
+    },
+    {
+      "role": "user",
+      "content": "What about performance optimization? (iteration 8)"
+    },
+    {
+      "role": "assistant",
+      "content": "Here's the answer for iteration 8... [detailed code and explanation]"
+    },
+    {
+      "role": "user",
+      "content": "Can you explain that code in more detail? (iteration 9)"
+    },
+    {
+      "role": "assistant",
+      "content": "Here's the answer for iteration 9... [detailed code and explanation]"
+    },
+    {
+      "role": "user",
+      "content": "What if I need to add error handling? (iteration 10)"
+    },
+    {
+      "role": "assistant",
+      "content": "Here's the answer for iteration 10... [detailed code and explanation]"
+    },
+    {
+      "role": "user",
+      "content": "What if I need to add error handling? (iteration 11)"
+    },
+    {
+      "role": "assistant",
+      "content": "Here's the answer for iteration 11... [detailed code and explanation]"
+    },
+    {
+      "role": "user",
+      "content": "Can you explain that code in more detail? (iteration 12)"
+    },
+    {
+      "role": "assistant",
+      "content": "Here's the answer for iteration 12... [detailed code and explanation]"
+    },
+    {
+      "role": "user",
+      "content": "How do I deploy this? (iteration 13)"
+    },
+    {
+      "role": "assistant",
+      "content": "Here's the answer for iteration 13... [detailed code and explanation]"
+    },
+    {
+      "role": "user",
+      "content": "What are the best practices here? (iteration 14)"
+    },
+    {
+      "role": "assistant",
+      "content": "Here's the answer for iteration 14... [detailed code and explanation]"
+    },
+    {
+      "role": "user",
+      "content": "Can you show me the complete file? (iteration 15)"
+    },
+    {
+      "role": "assistant",
+      "content": "Here's the answer for iteration 15... [detailed code and explanation]"
+    }
+  ],
+  "mixed": [
+    {
+      "role": "system",
+      "content": "You are a helpful coding assistant."
+    },
+    {
+      "role": "system",
+      "content": "Summary: Working on express project."
+    },
+    {
+      "role": "user",
+      "content": "Can you explain that code in more detail? (iteration 6)"
+    },
+    {
+      "role": "assistant",
+      "content": "Here's the answer for iteration 6... [detailed code and explanation]"
+    },
+    {
+      "role": "user",
+      "content": "What if I need to add error handling? (iteration 7)"
+    },
+    {
+      "role": "assistant",
+      "content": "Here's the answer for iteration 7... [detailed code and explanation]"
+    },
+    {
+      "role": "user",
+      "content": "What about performance optimization? (iteration 8)"
+    },
+    {
+      "role": "assistant",
+      "content": "Here's the answer for iteration 8... [detailed code and explanation]"
+    },
+    {
+      "role": "user",
+      "content": "Can you explain that code in more detail? (iteration 9)"
+    },
+    {
+      "role": "assistant",
+      "content": "Here's the answer for iteration 9... [detailed code and explanation]"
+    },
+    {
+      "role": "user",
+      "content": "What if I need to add error handling? (iteration 10)"
+    },
+    {
+      "role": "assistant",
+      "content": "Here's the answer for iteration 10... [detailed code and explanation]"
+    },
+    {
+      "role": "user",
+      "content": "What if I need to add error handling? (iteration 11)"
+    },
+    {
+      "role": "assistant",
+      "content": "Here's the answer for iteration 11... [detailed code and explanation]"
+    },
+    {
+      "role": "user",
+      "content": "Can you explain that code in more detail? (iteration 12)"
+    },
+    {
+      "role": "assistant",
+      "content": "Here's the answer for iteration 12... [detailed code and explanation]"
+    },
+    {
+      "role": "user",
+      "content": "How do I deploy this? (iteration 13)"
+    },
+    {
+      "role": "assistant",
+      "content": "Here's the answer for iteration 13... [detailed code and explanation]"
+    },
+    {
+      "role": "user",
+      "content": "What are the best practices here? (iteration 14)"
+    },
+    {
+      "role": "assistant",
+      "content": "Here's the answer for iteration 14... [detailed code and explanation]"
+    },
+    {
+      "role": "user",
+      "content": "Can you show me the complete file? (iteration 15)"
+    },
+    {
+      "role": "assistant",
+      "content": "Here's the answer for iteration 15... [detailed code and explanation]"
+    }
+  ]
+}

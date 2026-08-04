@@ -1,0 +1,198 @@
+{
+  "truncate": [
+    {
+      "role": "user",
+      "content": "I'm always confused by SQL JOINs. Can you explain the different types?"
+    },
+    {
+      "role": "assistant",
+      "content": "Sure! Here are the main JOIN types:\n\n**1. INNER JOIN** (most common)\nReturns only matching rows from both tables:\n [code omitted]"
+    },
+    {
+      "role": "user",
+      "content": "When would I use LEFT JOIN vs INNER JOIN?"
+    },
+    {
+      "role": "assistant",
+      "content": "**Use INNER JOIN when:**\n- You only want matching records\n- Relationship is required\n- Example: \"Show orders with customer details\" (every order must have a customer)\n\n [code omitted]"
+    },
+    {
+      "role": "user",
+      "content": "Can I join more than two tables?"
+    },
+    {
+      "role": "assistant",
+      "content": "Absolutely! You can chain multiple JOINs:\n\n [code omitted]"
+    },
+    {
+      "role": "user",
+      "content": "What about CROSS JOIN? When would I use that?"
+    },
+    {
+      "role": "assistant",
+      "content": "CROSS JOIN creates a Cartesian product (all combinations):\n\n [code omitted]"
+    },
+    {
+      "role": "user",
+      "content": "Great! Last question - what's the difference between WHERE and ON in JOINs?"
+    },
+    {
+      "role": "assistant",
+      "content": "Excellent question! They behave differently:\n\n**ON clause:**\n- Filters BEFORE the join\n- Defines the relationship\n- For OUTER JOINs, affects which rows are kept from the preserved table\n\n**WHERE clause:**\n- Filters AFTER the join\n- Filters the final result\n- Can turn OUTER JOIN into INNER JOIN\n\n**Example showing the difference:**\n\n [code omitted]"
+    }
+  ],
+  "summarize": [
+    {
+      "role": "system",
+      "content": "You are a helpful programming assistant."
+    },
+    {
+      "role": "system",
+      "content": "[Previous conversation summary: User was working on SQL JOIN Types using various technologies. Discussed code files.]"
+    },
+    {
+      "role": "system",
+      "content": "You are a helpful programming assistant."
+    },
+    {
+      "role": "user",
+      "content": "I'm always confused by SQL JOINs. Can you explain the different types?"
+    },
+    {
+      "role": "assistant",
+      "content": "Sure! Here are the main JOIN types:\n\n**1. INNER JOIN** (most common)\nReturns only matching rows from both tables:\n [code omitted]"
+    },
+    {
+      "role": "user",
+      "content": "When would I use LEFT JOIN vs INNER JOIN?"
+    },
+    {
+      "role": "assistant",
+      "content": "**Use INNER JOIN when:**\n- You only want matching records\n- Relationship is required\n- Example: \"Show orders with customer details\" (every order must have a customer)\n\n [code omitted]"
+    },
+    {
+      "role": "user",
+      "content": "Can I join more than two tables?"
+    },
+    {
+      "role": "assistant",
+      "content": "Absolutely! You can chain multiple JOINs:\n\n [code omitted]"
+    },
+    {
+      "role": "user",
+      "content": "What about CROSS JOIN? When would I use that?"
+    },
+    {
+      "role": "assistant",
+      "content": "CROSS JOIN creates a Cartesian product (all combinations):\n\n [code omitted]"
+    },
+    {
+      "role": "user",
+      "content": "Great! Last question - what's the difference between WHERE and ON in JOINs?"
+    },
+    {
+      "role": "assistant",
+      "content": "Excellent question! They behave differently:\n\n**ON clause:**\n- Filters BEFORE the join\n- Defines the relationship\n- For OUTER JOINs, affects which rows are kept from the preserved table\n\n**WHERE clause:**\n- Filters AFTER the join\n- Filters the final result\n- Can turn OUTER JOIN into INNER JOIN\n\n**Example showing the difference:**\n\n [code omitted]"
+    }
+  ],
+  "remove_code": [
+    {
+      "role": "system",
+      "content": "You are a helpful programming assistant."
+    },
+    {
+      "role": "user",
+      "content": "I'm always confused by SQL JOINs. Can you explain the different types?"
+    },
+    {
+      "role": "assistant",
+      "content": "Sure! Here are the main JOIN types:\n\n**1. INNER JOIN** (most common)\nReturns only matching rows from both tables:\n [code removed]"
+    },
+    {
+      "role": "user",
+      "content": "When would I use LEFT JOIN vs INNER JOIN?"
+    },
+    {
+      "role": "assistant",
+      "content": "**Use INNER JOIN when:**\n- You only want matching records\n- Relationship is required\n- Example: \"Show orders with customer details\" (every order must have a customer)\n\n [code removed]"
+    },
+    {
+      "role": "user",
+      "content": "Can I join more than two tables?"
+    },
+    {
+      "role": "assistant",
+      "content": "Absolutely! You can chain multiple JOINs:\n\n [code removed]"
+    },
+    {
+      "role": "user",
+      "content": "What about CROSS JOIN? When would I use that?"
+    },
+    {
+      "role": "assistant",
+      "content": "CROSS JOIN creates a Cartesian product (all combinations):\n\n [code removed]"
+    },
+    {
+      "role": "user",
+      "content": "Great! Last question - what's the difference between WHERE and ON in JOINs?"
+    },
+    {
+      "role": "assistant",
+      "content": "Excellent question! They behave differently:\n\n**ON clause:**\n- Filters BEFORE the join\n- Defines the relationship\n- For OUTER JOINs, affects which rows are kept from the preserved table\n\n**WHERE clause:**\n- Filters AFTER the join\n- Filters the final result\n- Can turn OUTER JOIN into INNER JOIN\n\n**Example showing the difference:**\n\n [code removed]"
+    }
+  ],
+  "mixed": [
+    {
+      "role": "system",
+      "content": "You are a helpful programming assistant."
+    },
+    {
+      "role": "system",
+      "content": "Summary: Working on SQL JOIN Types with various technologies."
+    },
+    {
+      "role": "system",
+      "content": "You are a helpful programming assistant."
+    },
+    {
+      "role": "user",
+      "content": "I'm always confused by SQL JOINs. Can you explain the different types?"
+    },
+    {
+      "role": "assistant",
+      "content": "Sure! Here are the main JOIN types:\n\n**1. INNER JOIN** (most common)\nReturns only matching rows from both tables:\n [code omitted]"
+    },
+    {
+      "role": "user",
+      "content": "When would I use LEFT JOIN vs INNER JOIN?"
+    },
+    {
+      "role": "assistant",
+      "content": "**Use INNER JOIN when:**\n- You only want matching records\n- Relationship is required\n- Example: \"Show orders with customer details\" (every order must have a customer)\n\n [code omitted]"
+    },
+    {
+      "role": "user",
+      "content": "Can I join more than two tables?"
+    },
+    {
+      "role": "assistant",
+      "content": "Absolutely! You can chain multiple JOINs:\n\n [code omitted]"
+    },
+    {
+      "role": "user",
+      "content": "What about CROSS JOIN? When would I use that?"
+    },
+    {
+      "role": "assistant",
+      "content": "CROSS JOIN creates a Cartesian product (all combinations):\n\n [code omitted]"
+    },
+    {
+      "role": "user",
+      "content": "Great! Last question - what's the difference between WHERE and ON in JOINs?"
+    },
+    {
+      "role": "assistant",
+      "content": "Excellent question! They behave differently:\n\n**ON clause:**\n- Filters BEFORE the join\n- Defines the relationship\n- For OUTER JOINs, affects which rows are kept from the preserved table\n\n**WHERE clause:**\n- Filters AFTER the join\n- Filters the final result\n- Can turn OUTER JOIN into INNER JOIN\n\n**Example showing the difference:**\n\n [code omitted]"
+    }
+  ]
+}

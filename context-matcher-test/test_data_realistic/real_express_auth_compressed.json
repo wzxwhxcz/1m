@@ -1,0 +1,90 @@
+{
+  "llm_compact_20": [
+    {
+      "role": "system",
+      "content": "You are a helpful programming assistant."
+    },
+    {
+      "role": "assistant",
+      "content": "[Conversation Summary]\n\nTechnologies discussed: JWT, async/await, Express\n\nThe user asked 5 questions over 9 messages.\n\nKey decisions made:\n- great! let's implement jwt authentication step by step\n- sure! here's a secure registration endpoint:\n\n```javascript\nconst bcrypt = require('bcryptjs');\ncons\n- here's the login endpoint:\n\n```javascript\nconst jwt = require('jsonwebtoken');\n\nrouter\n\nMost recent topics:\n- Great! Now what about the login endpoint that returns the JWT?\n- Perfect! Now how do I create the middleware to verify the token?\n\n[Continuing from here with full message history...]"
+    },
+    {
+      "role": "assistant",
+      "content": "Good question! Here's a token refresh implementation:\n\n```javascript\n// In your login endpoint, return both access and refresh tokens\nconst accessToken = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '15m' });\nconst refreshToken = jwt.sign(payload, process.env.REFRESH_TOKEN_SECRET, { expiresIn: '7d' });\n\n// Store refresh token in database\nawait user.update({ refreshToken });\n\nres.json({ accessToken, refreshToken });\n\n// Create refresh endpoint\nrouter.post('/refresh', async (req, res) => {\n  const { refreshToken } = req.body;\n  \n  if (!refreshToken) {\n    return res.status(401).json({ msg: 'Refresh token required' });\n  }\n  \n  try {\n    // Verify refresh token\n    const decoded = jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET);\n    \n    // Check if refresh token exists in database\n    const user = await User.findById(decoded.user.id);\n    if (!user || user.refreshToken !== refreshToken) {\n      return res.status(403).json({ msg: 'Invalid refresh token' });\n    }\n    \n    // Generate new access token\n    const payload = { user: { id: user.id } };\n    const newAccessToken = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '15m' });\n    \n    res.json({ accessToken: newAccessToken });\n  } catch (err) {\n    res.status(403).json({ msg: 'Invalid refresh token' });\n  }\n});\n```"
+    },
+    {
+      "role": "user",
+      "content": "Thank you! Should I also implement a logout endpoint?"
+    },
+    {
+      "role": "assistant",
+      "content": "Yes, definitely! Here's a logout endpoint:\n\n```javascript\nrouter.post('/logout', auth, async (req, res) => {\n  try {\n    // Remove refresh token from database\n    await User.findByIdAndUpdate(req.user.id, { refreshToken: null });\n    \n    res.json({ msg: 'Logged out successfully' });\n  } catch (err) {\n    console.error(err.message);\n    res.status(500).send('Server Error');\n  }\n});\n```\n\nFor a more robust solution, you might want to implement a token blacklist using Redis:\n\n```javascript\nconst redis = require('redis');\nconst client = redis.createClient();\n\nrouter.post('/logout', auth, async (req, res) => {\n  const token = req.header('Authorization')?.replace('Bearer ', '');\n  \n  try {\n    // Add token to blacklist with expiry matching token expiry\n    await client.setex(token, 900, 'blacklisted'); // 15 minutes\n    \n    // Remove refresh token from database\n    await User.findByIdAndUpdate(req.user.id, { refreshToken: null });\n    \n    res.json({ msg: 'Logged out successfully' });\n  } catch (err) {\n    console.error(err.message);\n    res.status(500).send('Server Error');\n  }\n});\n```"
+    }
+  ],
+  "llm_compact_15": [
+    {
+      "role": "system",
+      "content": "You are a helpful programming assistant."
+    },
+    {
+      "role": "assistant",
+      "content": "[Conversation Summary]\n\nTechnologies discussed: JWT, async/await, Express\n\nThe user asked 5 questions over 9 messages.\n\nKey decisions made:\n- great! let's implement jwt authentication step by step\n- sure! here's a secure registration endpoint:\n\n```javascript\nconst bcrypt = require('bcryptjs');\ncons\n- here's the login endpoint:\n\n```javascript\nconst jwt = require('jsonwebtoken');\n\nrouter\n\nMost recent topics:\n- Great! Now what about the login endpoint that returns the JWT?\n- Perfect! Now how do I create the middleware to verify the token?\n\n[Continuing from here with full message history...]"
+    },
+    {
+      "role": "assistant",
+      "content": "Good question! Here's a token refresh implementation:\n\n```javascript\n// In your login endpoint, return both access and refresh tokens\nconst accessToken = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '15m' });\nconst refreshToken = jwt.sign(payload, process.env.REFRESH_TOKEN_SECRET, { expiresIn: '7d' });\n\n// Store refresh token in database\nawait user.update({ refreshToken });\n\nres.json({ accessToken, refreshToken });\n\n// Create refresh endpoint\nrouter.post('/refresh', async (req, res) => {\n  const { refreshToken } = req.body;\n  \n  if (!refreshToken) {\n    return res.status(401).json({ msg: 'Refresh token required' });\n  }\n  \n  try {\n    // Verify refresh token\n    const decoded = jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET);\n    \n    // Check if refresh token exists in database\n    const user = await User.findById(decoded.user.id);\n    if (!user || user.refreshToken !== refreshToken) {\n      return res.status(403).json({ msg: 'Invalid refresh token' });\n    }\n    \n    // Generate new access token\n    const payload = { user: { id: user.id } };\n    const newAccessToken = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '15m' });\n    \n    res.json({ accessToken: newAccessToken });\n  } catch (err) {\n    res.status(403).json({ msg: 'Invalid refresh token' });\n  }\n});\n```"
+    },
+    {
+      "role": "user",
+      "content": "Thank you! Should I also implement a logout endpoint?"
+    },
+    {
+      "role": "assistant",
+      "content": "Yes, definitely! Here's a logout endpoint:\n\n```javascript\nrouter.post('/logout', auth, async (req, res) => {\n  try {\n    // Remove refresh token from database\n    await User.findByIdAndUpdate(req.user.id, { refreshToken: null });\n    \n    res.json({ msg: 'Logged out successfully' });\n  } catch (err) {\n    console.error(err.message);\n    res.status(500).send('Server Error');\n  }\n});\n```\n\nFor a more robust solution, you might want to implement a token blacklist using Redis:\n\n```javascript\nconst redis = require('redis');\nconst client = redis.createClient();\n\nrouter.post('/logout', auth, async (req, res) => {\n  const token = req.header('Authorization')?.replace('Bearer ', '');\n  \n  try {\n    // Add token to blacklist with expiry matching token expiry\n    await client.setex(token, 900, 'blacklisted'); // 15 minutes\n    \n    // Remove refresh token from database\n    await User.findByIdAndUpdate(req.user.id, { refreshToken: null });\n    \n    res.json({ msg: 'Logged out successfully' });\n  } catch (err) {\n    console.error(err.message);\n    res.status(500).send('Server Error');\n  }\n});\n```"
+    }
+  ],
+  "llm_compact_30": [
+    {
+      "role": "system",
+      "content": "You are a helpful programming assistant."
+    },
+    {
+      "role": "assistant",
+      "content": "[Conversation Summary]\n\nTechnologies discussed: JWT, async/await, Express\n\nThe user asked 5 questions over 9 messages.\n\nKey decisions made:\n- great! let's implement jwt authentication step by step\n- sure! here's a secure registration endpoint:\n\n```javascript\nconst bcrypt = require('bcryptjs');\ncons\n- here's the login endpoint:\n\n```javascript\nconst jwt = require('jsonwebtoken');\n\nrouter\n\nMost recent topics:\n- Great! Now what about the login endpoint that returns the JWT?\n- Perfect! Now how do I create the middleware to verify the token?\n\n[Continuing from here with full message history...]"
+    },
+    {
+      "role": "assistant",
+      "content": "Good question! Here's a token refresh implementation:\n\n```javascript\n// In your login endpoint, return both access and refresh tokens\nconst accessToken = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '15m' });\nconst refreshToken = jwt.sign(payload, process.env.REFRESH_TOKEN_SECRET, { expiresIn: '7d' });\n\n// Store refresh token in database\nawait user.update({ refreshToken });\n\nres.json({ accessToken, refreshToken });\n\n// Create refresh endpoint\nrouter.post('/refresh', async (req, res) => {\n  const { refreshToken } = req.body;\n  \n  if (!refreshToken) {\n    return res.status(401).json({ msg: 'Refresh token required' });\n  }\n  \n  try {\n    // Verify refresh token\n    const decoded = jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET);\n    \n    // Check if refresh token exists in database\n    const user = await User.findById(decoded.user.id);\n    if (!user || user.refreshToken !== refreshToken) {\n      return res.status(403).json({ msg: 'Invalid refresh token' });\n    }\n    \n    // Generate new access token\n    const payload = { user: { id: user.id } };\n    const newAccessToken = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '15m' });\n    \n    res.json({ accessToken: newAccessToken });\n  } catch (err) {\n    res.status(403).json({ msg: 'Invalid refresh token' });\n  }\n});\n```"
+    },
+    {
+      "role": "user",
+      "content": "Thank you! Should I also implement a logout endpoint?"
+    },
+    {
+      "role": "assistant",
+      "content": "Yes, definitely! Here's a logout endpoint:\n\n```javascript\nrouter.post('/logout', auth, async (req, res) => {\n  try {\n    // Remove refresh token from database\n    await User.findByIdAndUpdate(req.user.id, { refreshToken: null });\n    \n    res.json({ msg: 'Logged out successfully' });\n  } catch (err) {\n    console.error(err.message);\n    res.status(500).send('Server Error');\n  }\n});\n```\n\nFor a more robust solution, you might want to implement a token blacklist using Redis:\n\n```javascript\nconst redis = require('redis');\nconst client = redis.createClient();\n\nrouter.post('/logout', auth, async (req, res) => {\n  const token = req.header('Authorization')?.replace('Bearer ', '');\n  \n  try {\n    // Add token to blacklist with expiry matching token expiry\n    await client.setex(token, 900, 'blacklisted'); // 15 minutes\n    \n    // Remove refresh token from database\n    await User.findByIdAndUpdate(req.user.id, { refreshToken: null });\n    \n    res.json({ msg: 'Logged out successfully' });\n  } catch (err) {\n    console.error(err.message);\n    res.status(500).send('Server Error');\n  }\n});\n```"
+    }
+  ],
+  "aggressive_summary": [
+    {
+      "role": "system",
+      "content": "You are a helpful programming assistant."
+    },
+    {
+      "role": "assistant",
+      "content": "[Conversation Summary]\n\nTechnologies discussed: JWT, async/await, Express\n\nThe user asked 5 questions over 9 messages.\n\nKey decisions made:\n- great! let's implement jwt authentication step by step\n- sure! here's a secure registration endpoint:\n\n```javascript\nconst bcrypt = require('bcryptjs');\ncons\n- here's the login endpoint:\n\n```javascript\nconst jwt = require('jsonwebtoken');\n\nrouter\n\nMost recent topics:\n- Great! Now what about the login endpoint that returns the JWT?\n- Perfect! Now how do I create the middleware to verify the token?\n\n[Continuing from here with full message history...]"
+    },
+    {
+      "role": "assistant",
+      "content": "Good question! Here's a token refresh implementation:\n\n```javascript\n// In your login endpoint, return both access and refresh tokens\nconst accessToken = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '15m' });\nconst refreshToken = jwt.sign(payload, process.env.REFRESH_TOKEN_SECRET, { expiresIn: '7d' });\n\n// Store refresh token in database\nawait user.update({ refreshToken });\n\nres.json({ accessToken, refreshToken });\n\n// Create refresh endpoint\nrouter.post('/refresh', async (req, res) => {\n  const { refreshToken } = req.body;\n  \n  if (!refreshToken) {\n    return res.status(401).json({ msg: 'Refresh token required' });\n  }\n  \n  try {\n    // Verify refresh token\n    const decoded = jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET);\n    \n    // Check if refresh token exists in database\n    const user = await User.findById(decoded.user.id);\n    if (!user || user.refreshToken !== refreshToken) {\n      return res.status(403).json({ msg: 'Invalid refresh token' });\n    }\n    \n    // Generate new access token\n    const payload = { user: { id: user.id } };\n    const newAccessToken = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '15m' });\n    \n    res.json({ accessToken: newAccessToken });\n  } catch (err) {\n    res.status(403).json({ msg: 'Invalid refresh token' });\n  }\n});\n```"
+    },
+    {
+      "role": "user",
+      "content": "Thank you! Should I also implement a logout endpoint?"
+    },
+    {
+      "role": "assistant",
+      "content": "Yes, definitely! Here's a logout endpoint:\n\n```javascript\nrouter.post('/logout', auth, async (req, res) => {\n  try {\n    // Remove refresh token from database\n    await User.findByIdAndUpdate(req.user.id, { refreshToken: null });\n    \n    res.json({ msg: 'Logged out successfully' });\n  } catch (err) {\n    console.error(err.message);\n    res.status(500).send('Server Error');\n  }\n});\n```\n\nFor a more robust solution, you might want to implement a token blacklist using Redis:\n\n```javascript\nconst redis = require('redis');\nconst client = redis.createClient();\n\nrouter.post('/logout', auth, async (req, res) => {\n  const token = req.header('Authorization')?.replace('Bearer ', '');\n  \n  try {\n    // Add token to blacklist with expiry matching token expiry\n    await client.setex(token, 900, 'blacklisted'); // 15 minutes\n    \n    // Remove refresh token from database\n    await User.findByIdAndUpdate(req.user.id, { refreshToken: null });\n    \n    res.json({ msg: 'Logged out successfully' });\n  } catch (err) {\n    console.error(err.message);\n    res.status(500).send('Server Error');\n  }\n});\n```"
+    }
+  ]
+}

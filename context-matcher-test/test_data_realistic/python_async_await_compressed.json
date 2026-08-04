@@ -1,0 +1,90 @@
+{
+  "llm_compact_20": [
+    {
+      "role": "system",
+      "content": "You are a helpful programming assistant."
+    },
+    {
+      "role": "assistant",
+      "content": "[Conversation Summary]\n\nTechnologies discussed: Python, async/await\n\nThe user asked 5 questions over 9 messages.\n\nKey decisions made:\n- i keep seeing async/await in python code\n- `async`/`await` enables concurrent programming in python\n- you need an event loop:\n\n```python\nimport asyncio\n\n# method 1: asyncio\n\nMost recent topics:\n- Can I run multiple async functions at once?\n- What's the difference between asyncio.gather() and asyncio.create_task()?\n\n[Continuing from here with full message history...]"
+    },
+    {
+      "role": "assistant",
+      "content": "Yes, but be careful:\n\n```python\nimport asyncio\nfrom concurrent.futures import ThreadPoolExecutor\n\n# Run sync function in async context\nasync def main():\n    loop = asyncio.get_event_loop()\n    \n    # Run blocking function in thread pool\n    result = await loop.run_in_executor(\n        None,  # Uses default executor\n        blocking_function,\n        arg1, arg2\n    )\n\ndef blocking_function(arg1, arg2):\n    # Regular sync code\n    return slow_operation()\n\n# Or use a library like asyncio-compat\nimport requests\nfrom aiohttp import ClientSession\n\nasync def mixed():\n    # Sync requests (blocking)\n    sync_result = requests.get('https://api.example.com').json()\n    \n    # Async aiohttp (non-blocking)\n    async with ClientSession() as session:\n        async with session.get('https://api.example.com') as resp:\n            async_result = await resp.json()\n```\n\nPrefer async libraries when available!"
+    },
+    {
+      "role": "user",
+      "content": "This is super helpful! Any common mistakes to avoid?"
+    },
+    {
+      "role": "assistant",
+      "content": "Yes! Here are the top mistakes:\n\n**1. Forgetting await:**\n```python\n# ❌ Wrong - returns coroutine object\nresult = fetch_data_async()\n\n# ✅ Correct\nresult = await fetch_data_async()\n```\n\n**2. Using blocking code in async:**\n```python\n# ❌ Wrong - blocks event loop\nasync def bad():\n    time.sleep(1)  # Blocks!\n\n# ✅ Correct\nasync def good():\n    await asyncio.sleep(1)  # Async!\n```\n\n**3. Not using async context managers:**\n```python\n# ❌ Wrong - connection may not close\nresponse = await session.get(url)\ndata = await response.json()\n\n# ✅ Correct\nasync with session.get(url) as response:\n    data = await response.json()\n```\n\n**4. Mixing sync and async without executor:**\n```python\n# ❌ Wrong - blocks event loop\nasync def bad():\n    return requests.get(url)  # Sync call!\n\n# ✅ Correct\nasync def good():\n    async with aiohttp.ClientSession() as session:\n        async with session.get(url) as response:\n            return await response.json()\n```\n\nStick to async libraries and always `await` your coroutines!"
+    }
+  ],
+  "llm_compact_15": [
+    {
+      "role": "system",
+      "content": "You are a helpful programming assistant."
+    },
+    {
+      "role": "assistant",
+      "content": "[Conversation Summary]\n\nTechnologies discussed: Python, async/await\n\nThe user asked 5 questions over 9 messages.\n\nKey decisions made:\n- i keep seeing async/await in python code\n- `async`/`await` enables concurrent programming in python\n- you need an event loop:\n\n```python\nimport asyncio\n\n# method 1: asyncio\n\nMost recent topics:\n- Can I run multiple async functions at once?\n- What's the difference between asyncio.gather() and asyncio.create_task()?\n\n[Continuing from here with full message history...]"
+    },
+    {
+      "role": "assistant",
+      "content": "Yes, but be careful:\n\n```python\nimport asyncio\nfrom concurrent.futures import ThreadPoolExecutor\n\n# Run sync function in async context\nasync def main():\n    loop = asyncio.get_event_loop()\n    \n    # Run blocking function in thread pool\n    result = await loop.run_in_executor(\n        None,  # Uses default executor\n        blocking_function,\n        arg1, arg2\n    )\n\ndef blocking_function(arg1, arg2):\n    # Regular sync code\n    return slow_operation()\n\n# Or use a library like asyncio-compat\nimport requests\nfrom aiohttp import ClientSession\n\nasync def mixed():\n    # Sync requests (blocking)\n    sync_result = requests.get('https://api.example.com').json()\n    \n    # Async aiohttp (non-blocking)\n    async with ClientSession() as session:\n        async with session.get('https://api.example.com') as resp:\n            async_result = await resp.json()\n```\n\nPrefer async libraries when available!"
+    },
+    {
+      "role": "user",
+      "content": "This is super helpful! Any common mistakes to avoid?"
+    },
+    {
+      "role": "assistant",
+      "content": "Yes! Here are the top mistakes:\n\n**1. Forgetting await:**\n```python\n# ❌ Wrong - returns coroutine object\nresult = fetch_data_async()\n\n# ✅ Correct\nresult = await fetch_data_async()\n```\n\n**2. Using blocking code in async:**\n```python\n# ❌ Wrong - blocks event loop\nasync def bad():\n    time.sleep(1)  # Blocks!\n\n# ✅ Correct\nasync def good():\n    await asyncio.sleep(1)  # Async!\n```\n\n**3. Not using async context managers:**\n```python\n# ❌ Wrong - connection may not close\nresponse = await session.get(url)\ndata = await response.json()\n\n# ✅ Correct\nasync with session.get(url) as response:\n    data = await response.json()\n```\n\n**4. Mixing sync and async without executor:**\n```python\n# ❌ Wrong - blocks event loop\nasync def bad():\n    return requests.get(url)  # Sync call!\n\n# ✅ Correct\nasync def good():\n    async with aiohttp.ClientSession() as session:\n        async with session.get(url) as response:\n            return await response.json()\n```\n\nStick to async libraries and always `await` your coroutines!"
+    }
+  ],
+  "llm_compact_30": [
+    {
+      "role": "system",
+      "content": "You are a helpful programming assistant."
+    },
+    {
+      "role": "assistant",
+      "content": "[Conversation Summary]\n\nTechnologies discussed: Python, async/await\n\nThe user asked 5 questions over 9 messages.\n\nKey decisions made:\n- i keep seeing async/await in python code\n- `async`/`await` enables concurrent programming in python\n- you need an event loop:\n\n```python\nimport asyncio\n\n# method 1: asyncio\n\nMost recent topics:\n- Can I run multiple async functions at once?\n- What's the difference between asyncio.gather() and asyncio.create_task()?\n\n[Continuing from here with full message history...]"
+    },
+    {
+      "role": "assistant",
+      "content": "Yes, but be careful:\n\n```python\nimport asyncio\nfrom concurrent.futures import ThreadPoolExecutor\n\n# Run sync function in async context\nasync def main():\n    loop = asyncio.get_event_loop()\n    \n    # Run blocking function in thread pool\n    result = await loop.run_in_executor(\n        None,  # Uses default executor\n        blocking_function,\n        arg1, arg2\n    )\n\ndef blocking_function(arg1, arg2):\n    # Regular sync code\n    return slow_operation()\n\n# Or use a library like asyncio-compat\nimport requests\nfrom aiohttp import ClientSession\n\nasync def mixed():\n    # Sync requests (blocking)\n    sync_result = requests.get('https://api.example.com').json()\n    \n    # Async aiohttp (non-blocking)\n    async with ClientSession() as session:\n        async with session.get('https://api.example.com') as resp:\n            async_result = await resp.json()\n```\n\nPrefer async libraries when available!"
+    },
+    {
+      "role": "user",
+      "content": "This is super helpful! Any common mistakes to avoid?"
+    },
+    {
+      "role": "assistant",
+      "content": "Yes! Here are the top mistakes:\n\n**1. Forgetting await:**\n```python\n# ❌ Wrong - returns coroutine object\nresult = fetch_data_async()\n\n# ✅ Correct\nresult = await fetch_data_async()\n```\n\n**2. Using blocking code in async:**\n```python\n# ❌ Wrong - blocks event loop\nasync def bad():\n    time.sleep(1)  # Blocks!\n\n# ✅ Correct\nasync def good():\n    await asyncio.sleep(1)  # Async!\n```\n\n**3. Not using async context managers:**\n```python\n# ❌ Wrong - connection may not close\nresponse = await session.get(url)\ndata = await response.json()\n\n# ✅ Correct\nasync with session.get(url) as response:\n    data = await response.json()\n```\n\n**4. Mixing sync and async without executor:**\n```python\n# ❌ Wrong - blocks event loop\nasync def bad():\n    return requests.get(url)  # Sync call!\n\n# ✅ Correct\nasync def good():\n    async with aiohttp.ClientSession() as session:\n        async with session.get(url) as response:\n            return await response.json()\n```\n\nStick to async libraries and always `await` your coroutines!"
+    }
+  ],
+  "aggressive_summary": [
+    {
+      "role": "system",
+      "content": "You are a helpful programming assistant."
+    },
+    {
+      "role": "assistant",
+      "content": "[Conversation Summary]\n\nTechnologies discussed: Python, async/await\n\nThe user asked 5 questions over 9 messages.\n\nKey decisions made:\n- i keep seeing async/await in python code\n- `async`/`await` enables concurrent programming in python\n- you need an event loop:\n\n```python\nimport asyncio\n\n# method 1: asyncio\n\nMost recent topics:\n- Can I run multiple async functions at once?\n- What's the difference between asyncio.gather() and asyncio.create_task()?\n\n[Continuing from here with full message history...]"
+    },
+    {
+      "role": "assistant",
+      "content": "Yes, but be careful:\n\n```python\nimport asyncio\nfrom concurrent.futures import ThreadPoolExecutor\n\n# Run sync function in async context\nasync def main():\n    loop = asyncio.get_event_loop()\n    \n    # Run blocking function in thread pool\n    result = await loop.run_in_executor(\n        None,  # Uses default executor\n        blocking_function,\n        arg1, arg2\n    )\n\ndef blocking_function(arg1, arg2):\n    # Regular sync code\n    return slow_operation()\n\n# Or use a library like asyncio-compat\nimport requests\nfrom aiohttp import ClientSession\n\nasync def mixed():\n    # Sync requests (blocking)\n    sync_result = requests.get('https://api.example.com').json()\n    \n    # Async aiohttp (non-blocking)\n    async with ClientSession() as session:\n        async with session.get('https://api.example.com') as resp:\n            async_result = await resp.json()\n```\n\nPrefer async libraries when available!"
+    },
+    {
+      "role": "user",
+      "content": "This is super helpful! Any common mistakes to avoid?"
+    },
+    {
+      "role": "assistant",
+      "content": "Yes! Here are the top mistakes:\n\n**1. Forgetting await:**\n```python\n# ❌ Wrong - returns coroutine object\nresult = fetch_data_async()\n\n# ✅ Correct\nresult = await fetch_data_async()\n```\n\n**2. Using blocking code in async:**\n```python\n# ❌ Wrong - blocks event loop\nasync def bad():\n    time.sleep(1)  # Blocks!\n\n# ✅ Correct\nasync def good():\n    await asyncio.sleep(1)  # Async!\n```\n\n**3. Not using async context managers:**\n```python\n# ❌ Wrong - connection may not close\nresponse = await session.get(url)\ndata = await response.json()\n\n# ✅ Correct\nasync with session.get(url) as response:\n    data = await response.json()\n```\n\n**4. Mixing sync and async without executor:**\n```python\n# ❌ Wrong - blocks event loop\nasync def bad():\n    return requests.get(url)  # Sync call!\n\n# ✅ Correct\nasync def good():\n    async with aiohttp.ClientSession() as session:\n        async with session.get(url) as response:\n            return await response.json()\n```\n\nStick to async libraries and always `await` your coroutines!"
+    }
+  ]
+}

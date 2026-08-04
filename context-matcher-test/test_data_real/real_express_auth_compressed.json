@@ -1,0 +1,222 @@
+{
+  "truncate": [
+    {
+      "role": "user",
+      "content": "Okay, can you show me the registration endpoint with password hashing?"
+    },
+    {
+      "role": "assistant",
+      "content": "Sure! Here's a secure registration endpoint:\n\n [code omitted]"
+    },
+    {
+      "role": "user",
+      "content": "Great! Now what about the login endpoint that returns the JWT?"
+    },
+    {
+      "role": "assistant",
+      "content": "Here's the login endpoint:\n\n [code omitted]"
+    },
+    {
+      "role": "user",
+      "content": "Perfect! Now how do I create the middleware to verify the token?"
+    },
+    {
+      "role": "assistant",
+      "content": "Here's the authentication middleware:\n\n [code omitted]"
+    },
+    {
+      "role": "user",
+      "content": "This is excellent! One more question - how should I handle token refresh?"
+    },
+    {
+      "role": "assistant",
+      "content": "Good question! Here's a token refresh implementation:\n\n [code omitted]"
+    },
+    {
+      "role": "user",
+      "content": "Thank you! Should I also implement a logout endpoint?"
+    },
+    {
+      "role": "assistant",
+      "content": "Yes, definitely! Here's a logout endpoint:\n\n [code omitted]"
+    }
+  ],
+  "summarize": [
+    {
+      "role": "system",
+      "content": "You are a helpful programming assistant."
+    },
+    {
+      "role": "system",
+      "content": "[Previous conversation summary: User was working on Express JWT Authentication using various technologies. Discussed code files.]"
+    },
+    {
+      "role": "system",
+      "content": "You are a helpful programming assistant."
+    },
+    {
+      "role": "user",
+      "content": "I'm building a REST API with Express and need to implement JWT authentication. Where should I start?"
+    },
+    {
+      "role": "assistant",
+      "content": "Great! Let's implement JWT authentication step by step. First, you'll need to install the required packages:\n\n [code omitted]"
+    },
+    {
+      "role": "user",
+      "content": "Okay, can you show me the registration endpoint with password hashing?"
+    },
+    {
+      "role": "assistant",
+      "content": "Sure! Here's a secure registration endpoint:\n\n [code omitted]"
+    },
+    {
+      "role": "user",
+      "content": "Great! Now what about the login endpoint that returns the JWT?"
+    },
+    {
+      "role": "assistant",
+      "content": "Here's the login endpoint:\n\n [code omitted]"
+    },
+    {
+      "role": "user",
+      "content": "Perfect! Now how do I create the middleware to verify the token?"
+    },
+    {
+      "role": "assistant",
+      "content": "Here's the authentication middleware:\n\n [code omitted]"
+    },
+    {
+      "role": "user",
+      "content": "This is excellent! One more question - how should I handle token refresh?"
+    },
+    {
+      "role": "assistant",
+      "content": "Good question! Here's a token refresh implementation:\n\n [code omitted]"
+    },
+    {
+      "role": "user",
+      "content": "Thank you! Should I also implement a logout endpoint?"
+    },
+    {
+      "role": "assistant",
+      "content": "Yes, definitely! Here's a logout endpoint:\n\n [code omitted]"
+    }
+  ],
+  "remove_code": [
+    {
+      "role": "system",
+      "content": "You are a helpful programming assistant."
+    },
+    {
+      "role": "user",
+      "content": "I'm building a REST API with Express and need to implement JWT authentication. Where should I start?"
+    },
+    {
+      "role": "assistant",
+      "content": "Great! Let's implement JWT authentication step by step. First, you'll need to install the required packages:\n\n [code removed]"
+    },
+    {
+      "role": "user",
+      "content": "Okay, can you show me the registration endpoint with password hashing?"
+    },
+    {
+      "role": "assistant",
+      "content": "Sure! Here's a secure registration endpoint:\n\n [code removed]"
+    },
+    {
+      "role": "user",
+      "content": "Great! Now what about the login endpoint that returns the JWT?"
+    },
+    {
+      "role": "assistant",
+      "content": "Here's the login endpoint:\n\n [code removed]"
+    },
+    {
+      "role": "user",
+      "content": "Perfect! Now how do I create the middleware to verify the token?"
+    },
+    {
+      "role": "assistant",
+      "content": "Here's the authentication middleware:\n\n [code removed]"
+    },
+    {
+      "role": "user",
+      "content": "This is excellent! One more question - how should I handle token refresh?"
+    },
+    {
+      "role": "assistant",
+      "content": "Good question! Here's a token refresh implementation:\n\n [code removed]"
+    },
+    {
+      "role": "user",
+      "content": "Thank you! Should I also implement a logout endpoint?"
+    },
+    {
+      "role": "assistant",
+      "content": "Yes, definitely! Here's a logout endpoint:\n\n [code removed]"
+    }
+  ],
+  "mixed": [
+    {
+      "role": "system",
+      "content": "You are a helpful programming assistant."
+    },
+    {
+      "role": "system",
+      "content": "Summary: Working on Express JWT Authentication with various technologies."
+    },
+    {
+      "role": "system",
+      "content": "You are a helpful programming assistant."
+    },
+    {
+      "role": "user",
+      "content": "I'm building a REST API with Express and need to implement JWT authentication. Where should I start?"
+    },
+    {
+      "role": "assistant",
+      "content": "Great! Let's implement JWT authentication step by step. First, you'll need to install the required packages:\n\n [code omitted]"
+    },
+    {
+      "role": "user",
+      "content": "Okay, can you show me the registration endpoint with password hashing?"
+    },
+    {
+      "role": "assistant",
+      "content": "Sure! Here's a secure registration endpoint:\n\n [code omitted]"
+    },
+    {
+      "role": "user",
+      "content": "Great! Now what about the login endpoint that returns the JWT?"
+    },
+    {
+      "role": "assistant",
+      "content": "Here's the login endpoint:\n\n [code omitted]"
+    },
+    {
+      "role": "user",
+      "content": "Perfect! Now how do I create the middleware to verify the token?"
+    },
+    {
+      "role": "assistant",
+      "content": "Here's the authentication middleware:\n\n [code omitted]"
+    },
+    {
+      "role": "user",
+      "content": "This is excellent! One more question - how should I handle token refresh?"
+    },
+    {
+      "role": "assistant",
+      "content": "Good question! Here's a token refresh implementation:\n\n [code omitted]"
+    },
+    {
+      "role": "user",
+      "content": "Thank you! Should I also implement a logout endpoint?"
+    },
+    {
+      "role": "assistant",
+      "content": "Yes, definitely! Here's a logout endpoint:\n\n [code omitted]"
+    }
+  ]
+}

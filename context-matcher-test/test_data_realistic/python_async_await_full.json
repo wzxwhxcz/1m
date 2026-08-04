@@ -1,0 +1,58 @@
+{
+  "id": "python_async_await",
+  "topic": "Python Async/Await",
+  "messages": [
+    {
+      "role": "system",
+      "content": "You are a helpful programming assistant."
+    },
+    {
+      "role": "user",
+      "content": "I keep seeing async/await in Python code. What exactly is it and when should I use it?"
+    },
+    {
+      "role": "assistant",
+      "content": "`async`/`await` enables concurrent programming in Python. Use it for I/O-bound operations:\n\n```python\nimport asyncio\nimport aiohttp\n\n# Regular function - runs sequentially\ndef fetch_data():\n    response = requests.get('https://api.example.com')\n    return response.json()\n\n# Async function - can run concurrently\nasync def fetch_data_async():\n    async with aiohttp.ClientSession() as session:\n        async with session.get('https://api.example.com') as response:\n            return await response.json()\n```\n\n**Use async when:**\n- Making API calls\n- Database queries\n- File I/O\n- Network operations\n\n**Don't use async for:**\n- CPU-intensive tasks (use multiprocessing)\n- Simple scripts\n- When libraries don't support it"
+    },
+    {
+      "role": "user",
+      "content": "How do I run an async function?"
+    },
+    {
+      "role": "assistant",
+      "content": "You need an event loop:\n\n```python\nimport asyncio\n\n# Method 1: asyncio.run() (Python 3.7+)\nasync def main():\n    result = await fetch_data_async()\n    print(result)\n\nasyncio.run(main())\n\n# Method 2: get_event_loop() (older code)\nloop = asyncio.get_event_loop()\nresult = loop.run_until_complete(fetch_data_async())\n\n# Method 3: In Jupyter notebooks\nawait fetch_data_async()  # Works directly!\n```\n\nMost modern code uses `asyncio.run()`."
+    },
+    {
+      "role": "user",
+      "content": "Can I run multiple async functions at once?"
+    },
+    {
+      "role": "assistant",
+      "content": "Yes! That's the power of async:\n\n```python\nimport asyncio\n\n# Run multiple coroutines concurrently\nasync def main():\n    # gather() runs all at once\n    results = await asyncio.gather(\n        fetch_user(1),\n        fetch_user(2),\n        fetch_user(3)\n    )\n    print(results)  # [user1, user2, user3]\n\n# Run with timeout\nasync def fetch_with_timeout():\n    try:\n        result = await asyncio.wait_for(\n            fetch_data_async(),\n            timeout=5.0\n        )\n    except asyncio.TimeoutError:\n        print('Request timed out!')\n\n# Run as tasks\nasync def main():\n    task1 = asyncio.create_task(fetch_user(1))\n    task2 = asyncio.create_task(fetch_user(2))\n    \n    user1 = await task1\n    user2 = await task2\n```"
+    },
+    {
+      "role": "user",
+      "content": "What's the difference between asyncio.gather() and asyncio.create_task()?"
+    },
+    {
+      "role": "assistant",
+      "content": "Good question!\n\n**asyncio.gather():**\n- Waits for all to complete\n- Returns results in order\n- If one fails, others continue (with return_exceptions=True)\n\n```python\nresults = await asyncio.gather(\n    task1(),\n    task2(),\n    task3()\n)\n```\n\n**asyncio.create_task():**\n- Schedules coroutine to run\n- Returns Task object immediately\n- More control over individual tasks\n\n```python\ntask1 = asyncio.create_task(do_something())\ntask2 = asyncio.create_task(do_something_else())\n\n# Do other work...\n\nresult1 = await task1\nresult2 = await task2\n```\n\nUse `gather()` when you want all results at once. Use `create_task()` when you need more control."
+    },
+    {
+      "role": "user",
+      "content": "Can I use async with regular synchronous code?"
+    },
+    {
+      "role": "assistant",
+      "content": "Yes, but be careful:\n\n```python\nimport asyncio\nfrom concurrent.futures import ThreadPoolExecutor\n\n# Run sync function in async context\nasync def main():\n    loop = asyncio.get_event_loop()\n    \n    # Run blocking function in thread pool\n    result = await loop.run_in_executor(\n        None,  # Uses default executor\n        blocking_function,\n        arg1, arg2\n    )\n\ndef blocking_function(arg1, arg2):\n    # Regular sync code\n    return slow_operation()\n\n# Or use a library like asyncio-compat\nimport requests\nfrom aiohttp import ClientSession\n\nasync def mixed():\n    # Sync requests (blocking)\n    sync_result = requests.get('https://api.example.com').json()\n    \n    # Async aiohttp (non-blocking)\n    async with ClientSession() as session:\n        async with session.get('https://api.example.com') as resp:\n            async_result = await resp.json()\n```\n\nPrefer async libraries when available!"
+    },
+    {
+      "role": "user",
+      "content": "This is super helpful! Any common mistakes to avoid?"
+    },
+    {
+      "role": "assistant",
+      "content": "Yes! Here are the top mistakes:\n\n**1. Forgetting await:**\n```python\n# ❌ Wrong - returns coroutine object\nresult = fetch_data_async()\n\n# ✅ Correct\nresult = await fetch_data_async()\n```\n\n**2. Using blocking code in async:**\n```python\n# ❌ Wrong - blocks event loop\nasync def bad():\n    time.sleep(1)  # Blocks!\n\n# ✅ Correct\nasync def good():\n    await asyncio.sleep(1)  # Async!\n```\n\n**3. Not using async context managers:**\n```python\n# ❌ Wrong - connection may not close\nresponse = await session.get(url)\ndata = await response.json()\n\n# ✅ Correct\nasync with session.get(url) as response:\n    data = await response.json()\n```\n\n**4. Mixing sync and async without executor:**\n```python\n# ❌ Wrong - blocks event loop\nasync def bad():\n    return requests.get(url)  # Sync call!\n\n# ✅ Correct\nasync def good():\n    async with aiohttp.ClientSession() as session:\n        async with session.get(url) as response:\n            return await response.json()\n```\n\nStick to async libraries and always `await` your coroutines!"
+    }
+  ]
+}
