@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 use chrono::{DateTime, Utc};
 
 // User model
-#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct User {
     pub id: i32,
     pub service_key: String,
@@ -69,7 +69,7 @@ impl User {
 }
 
 // Admin model
-#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Admin {
     pub id: i32,
     pub username: String,
@@ -106,7 +106,7 @@ pub struct UpdateUserRequest {
 }
 
 // Request log model
-#[derive(Debug, Serialize, sqlx::FromRow)]
+#[derive(Debug, Serialize)]
 pub struct RequestLog {
     pub id: i64,
     pub user_id: i32,

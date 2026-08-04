@@ -163,8 +163,8 @@ pub async fn login_handler(
     Ok(Json(LoginResponse {
         token,
         user: UserInfo {
-            id: admin.id,
-            username: admin.username,
+            id: admin.0,
+            username: admin.1,
         },
     }))
 }
@@ -177,7 +177,7 @@ pub async fn list_users_handler(
     let page_size = params.page_size.unwrap_or(20).clamp(1, 100);
     let offset = (page - 1) * page_size;
 
-    let users = sqlx::query_as::<_, User>(
+    let rows = sqlx::query(
         r#"
         SELECT id, service_key, email, plan, quota_daily, quota_used_today, is_active, created_at, updated_at
         FROM users
@@ -190,6 +190,18 @@ pub async fn list_users_handler(
     .fetch_all(&db)
     .await
     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    let users: Vec<User> = rows.iter().map(|row| User {
+        id: row.get("id"),
+        service_key: row.get("service_key"),
+        email: row.get("email"),
+        plan: row.get("plan"),
+        quota_daily: row.get("quota_daily"),
+        quota_used_today: row.get("quota_used_today"),
+        is_active: row.get("is_active"),
+        created_at: row.get("created_at"),
+        updated_at: row.get("updated_at"),
+    }).collect();
 
     let total: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM users")
         .fetch_one(&db)
@@ -206,7 +218,7 @@ pub async fn get_user_handler(
     State(db): State<PgPool>,
     Path(id): Path<i32>,
 ) -> Result<Json<User>, (StatusCode, String)> {
-    let user = sqlx::query_as::<_, User>(
+    let row = sqlx::query(
         r#"
         SELECT id, service_key, email, plan, quota_daily, quota_used_today, is_active, created_at, updated_at
         FROM users
@@ -219,6 +231,18 @@ pub async fn get_user_handler(
     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
     .ok_or((StatusCode::NOT_FOUND, "User not found".to_string()))?;
 
+    let user = User {
+        id: row.get("id"),
+        service_key: row.get("service_key"),
+        email: row.get("email"),
+        plan: row.get("plan"),
+        quota_daily: row.get("quota_daily"),
+        quota_used_today: row.get("quota_used_today"),
+        is_active: row.get("is_active"),
+        created_at: row.get("created_at"),
+        updated_at: row.get("updated_at"),
+    };
+
     Ok(Json(user))
 }
 
@@ -229,7 +253,7 @@ pub async fn create_user_handler(
     // Generate service key
     let service_key = format!("sk-{}", uuid::Uuid::new_v4().simple());
 
-    let user = sqlx::query_as::<_, User>(
+    let row = sqlx::query(
         r#"
         INSERT INTO users (service_key, email, plan, quota_daily)
         VALUES ($1, $2, $3, $4)
@@ -244,6 +268,18 @@ pub async fn create_user_handler(
     .await
     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
+    let user = User {
+        id: row.get("id"),
+        service_key: row.get("service_key"),
+        email: row.get("email"),
+        plan: row.get("plan"),
+        quota_daily: row.get("quota_daily"),
+        quota_used_today: row.get("quota_used_today"),
+        is_active: row.get("is_active"),
+        created_at: row.get("created_at"),
+        updated_at: row.get("updated_at"),
+    };
+
     Ok(Json(user))
 }
 
@@ -252,7 +288,7 @@ pub async fn update_user_handler(
     Path(id): Path<i32>,
     Json(req): Json<UpdateUserRequest>,
 ) -> Result<Json<User>, (StatusCode, String)> {
-    let user = sqlx::query_as::<_, User>(
+    let row = sqlx::query(
         r#"
         UPDATE users
         SET email = COALESCE($2, email),
@@ -273,6 +309,18 @@ pub async fn update_user_handler(
     .await
     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
     .ok_or((StatusCode::NOT_FOUND, "User not found".to_string()))?;
+
+    let user = User {
+        id: row.get("id"),
+        service_key: row.get("service_key"),
+        email: row.get("email"),
+        plan: row.get("plan"),
+        quota_daily: row.get("quota_daily"),
+        quota_used_today: row.get("quota_used_today"),
+        is_active: row.get("is_active"),
+        created_at: row.get("created_at"),
+        updated_at: row.get("updated_at"),
+    };
 
     Ok(Json(user))
 }
@@ -435,8 +483,8 @@ pub async fn list_logs_handler(
     let user_id: Option<i32> = params.get("user_id").and_then(|s| s.parse().ok());
     let offset = (page - 1) * page_size;
 
-    let logs = if let Some(uid) = user_id {
-        sqlx::query_as::<_, RequestLog>(
+    let rows = if let Some(uid) = user_id {
+        sqlx::query(
             r#"
             SELECT id, user_id, upstream_url, input_tokens, output_tokens,
                    recall_triggered, recall_latency_ms, total_latency_ms, status, error_message, created_at
@@ -452,7 +500,7 @@ pub async fn list_logs_handler(
         .fetch_all(&db)
         .await
     } else {
-        sqlx::query_as::<_, RequestLog>(
+        sqlx::query(
             r#"
             SELECT id, user_id, upstream_url, input_tokens, output_tokens,
                    recall_triggered, recall_latency_ms, total_latency_ms, status, error_message, created_at
@@ -467,6 +515,20 @@ pub async fn list_logs_handler(
         .await
     }
     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    let logs: Vec<RequestLog> = rows.iter().map(|row| RequestLog {
+        id: row.get("id"),
+        user_id: row.get("user_id"),
+        upstream_url: row.get("upstream_url"),
+        input_tokens: row.get("input_tokens"),
+        output_tokens: row.get("output_tokens"),
+        recall_triggered: row.get("recall_triggered"),
+        recall_latency_ms: row.get("recall_latency_ms"),
+        total_latency_ms: row.get("total_latency_ms"),
+        status: row.get("status"),
+        error_message: row.get("error_message"),
+        created_at: row.get("created_at"),
+    }).collect();
 
     let total: (i64,) = if let Some(uid) = user_id {
         sqlx::query_as("SELECT COUNT(*) FROM request_logs WHERE user_id = $1")
