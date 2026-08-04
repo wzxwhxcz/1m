@@ -9,7 +9,8 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # 复制 Cargo 文件
-COPY Cargo.toml Cargo.lock* ./
+COPY Cargo.toml ./
+COPY Cargo.lock ./
 
 # 复制源码
 COPY src ./src
