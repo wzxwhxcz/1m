@@ -2,7 +2,7 @@ use axum::{
     extract::Request,
     http::{StatusCode, header::AUTHORIZATION},
     middleware::Next,
-    response::{IntoResponse, Response},
+    response::Response,
 };
 use jsonwebtoken::{decode, DecodingKey, Validation};
 use serde::{Deserialize, Serialize};
@@ -17,7 +17,7 @@ pub struct Claims {
 }
 
 pub async fn jwt_auth_middleware(
-    mut req: Request,
+    req: Request,
     next: Next,
 ) -> Result<Response, (StatusCode, String)> {
     let auth_header = req
@@ -30,7 +30,7 @@ pub async fn jwt_auth_middleware(
         .strip_prefix("Bearer ")
         .ok_or((StatusCode::UNAUTHORIZED, "Invalid authorization format".to_string()))?;
 
-    let token_data = decode::<Claims>(
+    let _token_data = decode::<Claims>(
         token,
         &DecodingKey::from_secret(JWT_SECRET),
         &Validation::default(),

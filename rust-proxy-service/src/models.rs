@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 use chrono::{DateTime, Utc};
+use sqlx::Row;
 
 // User model
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -17,14 +18,24 @@ pub struct User {
 
 impl User {
     pub async fn find_by_service_key(pool: &crate::DbPool, service_key: &str) -> crate::Result<Option<Self>> {
-        let user = sqlx::query_as::<_, User>(
-            "SELECT * FROM users WHERE service_key = $1 AND is_active = true"
+        let row = sqlx::query(
+            "SELECT id, service_key, email, plan, quota_daily, quota_used_today, is_active, created_at, updated_at FROM users WHERE service_key = $1 AND is_active = true"
         )
         .bind(service_key)
         .fetch_optional(pool)
         .await?;
 
-        Ok(user)
+        Ok(row.map(|row| User {
+            id: row.get("id"),
+            service_key: row.get("service_key"),
+            email: row.get("email"),
+            plan: row.get("plan"),
+            quota_daily: row.get("quota_daily"),
+            quota_used_today: row.get("quota_used_today"),
+            is_active: row.get("is_active"),
+            created_at: row.get("created_at"),
+            updated_at: row.get("updated_at"),
+        }))
     }
 
     pub async fn increment_quota(&self, pool: &crate::DbPool) -> crate::Result<()> {
@@ -38,7 +49,7 @@ impl User {
         Ok(())
     }
 
-    pub async fn increment_tokens(&self, pool: &crate::DbPool, input_tokens: i32, output_tokens: i32) -> crate::Result<()> {
+    pub async fn increment_tokens(&self, pool: &crate::DbPool, _input_tokens: i32, _output_tokens: i32) -> crate::Result<()> {
         sqlx::query(
             "UPDATE users SET quota_used_today = quota_used_today + 1, updated_at = NOW() WHERE id = $1"
         )

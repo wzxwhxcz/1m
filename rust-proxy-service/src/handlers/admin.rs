@@ -1,15 +1,13 @@
 use axum::{
     extract::{Path, Query, State},
     http::StatusCode,
-    response::IntoResponse,
     Json,
 };
 use serde::{Deserialize, Serialize};
-use sqlx::PgPool;
+use sqlx::{PgPool, Row};
 use chrono::{DateTime, Utc};
 use jsonwebtoken::{encode, EncodingKey, Header};
 use bcrypt::verify;
-use std::sync::Arc;
 
 const JWT_SECRET: &[u8] = b"context-proxy-secret-key-change-in-production";
 
@@ -566,7 +564,7 @@ pub struct UpdateSystemConfigRequest {
 }
 
 pub async fn get_system_config_handler(
-    State(db): State<PgPool>,
+    State(_db): State<PgPool>,
 ) -> Result<Json<SystemConfig>, (StatusCode, String)> {
     // 简化版：返回硬编码配置，实际应该从数据库或配置文件读取
     Ok(Json(SystemConfig {
@@ -581,7 +579,7 @@ pub async fn get_system_config_handler(
 }
 
 pub async fn update_system_config_handler(
-    State(db): State<PgPool>,
+    State(_db): State<PgPool>,
     Json(req): Json<UpdateSystemConfigRequest>,
 ) -> Result<Json<SystemConfig>, (StatusCode, String)> {
     // TODO: 实现配置更新逻辑
