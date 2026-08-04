@@ -4,5 +4,5 @@ pub mod logging;
 pub mod jwt;
 
 pub use auth::AuthMiddleware;
-pub use ratelimit::RateLimitMiddleware;
+pub use ratelimit::RedisRateLimiter;
 pub use jwt::jwt_auth_middleware;

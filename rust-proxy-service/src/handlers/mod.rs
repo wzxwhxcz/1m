@@ -235,12 +235,17 @@ pub async fn dynamic_chat_completions_handler(
     }
 
     // 5. Forward to upstream
-    let response = state.proxy_service
+    let response_body = state.proxy_service
         .forward_request(&upstream_url, &request, api_key.to_string())
         .await?;
 
     let duration = start.elapsed();
     crate::metrics::REQUEST_DURATION.observe(duration.as_secs_f64());
 
-    Ok(response)
+    // Convert String to Response
+    Ok(Response::builder()
+        .status(200)
+        .header("Content-Type", "application/json")
+        .body(Body::from(response_body))
+        .unwrap())
 }

@@ -128,17 +128,17 @@ pub async fn login_handler(
     Json(req): Json<LoginRequest>,
 ) -> Result<Json<LoginResponse>, (StatusCode, String)> {
     // Query admin from database
-    let admin = sqlx::query!(
-        r#"SELECT id, username, password_hash FROM admins WHERE username = $1"#,
-        req.username
+    let admin = sqlx::query_as::<_, (i32, String, String)>(
+        r#"SELECT id, username, password_hash FROM admins WHERE username = $1"#
     )
+    .bind(&req.username)
     .fetch_optional(&db)
     .await
     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
     .ok_or((StatusCode::UNAUTHORIZED, "用户名或密码错误".to_string()))?;
 
     // Verify password
-    let valid = verify(&req.password, &admin.password_hash)
+    let valid = verify(&req.password, &admin.2)
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
     if !valid {
@@ -148,8 +148,8 @@ pub async fn login_handler(
     // Generate JWT
     let exp = (chrono::Utc::now() + chrono::Duration::hours(24)).timestamp();
     let claims = Claims {
-        sub: admin.id,
-        username: admin.username.clone(),
+        sub: admin.0,
+        username: admin.1.clone(),
         exp,
     };
 
@@ -177,17 +177,16 @@ pub async fn list_users_handler(
     let page_size = params.page_size.unwrap_or(20).clamp(1, 100);
     let offset = (page - 1) * page_size;
 
-    let users = sqlx::query_as!(
-        User,
+    let users = sqlx::query_as::<_, User>(
         r#"
         SELECT id, service_key, email, plan, quota_daily, quota_used_today, is_active, created_at, updated_at
         FROM users
         ORDER BY created_at DESC
         LIMIT $1 OFFSET $2
-        "#,
-        page_size as i64,
-        offset as i64
+        "#
     )
+    .bind(page_size as i64)
+    .bind(offset as i64)
     .fetch_all(&db)
     .await
     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
@@ -207,15 +206,14 @@ pub async fn get_user_handler(
     State(db): State<PgPool>,
     Path(id): Path<i32>,
 ) -> Result<Json<User>, (StatusCode, String)> {
-    let user = sqlx::query_as!(
-        User,
+    let user = sqlx::query_as::<_, User>(
         r#"
         SELECT id, service_key, email, plan, quota_daily, quota_used_today, is_active, created_at, updated_at
         FROM users
         WHERE id = $1
-        "#,
-        id
+        "#
     )
+    .bind(id)
     .fetch_optional(&db)
     .await
     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
@@ -231,18 +229,17 @@ pub async fn create_user_handler(
     // Generate service key
     let service_key = format!("sk-{}", uuid::Uuid::new_v4().simple());
 
-    let user = sqlx::query_as!(
-        User,
+    let user = sqlx::query_as::<_, User>(
         r#"
         INSERT INTO users (service_key, email, plan, quota_daily)
         VALUES ($1, $2, $3, $4)
         RETURNING id, service_key, email, plan, quota_daily, quota_used_today, is_active, created_at, updated_at
-        "#,
-        service_key,
-        req.email,
-        req.plan,
-        req.quota_daily
+        "#
     )
+    .bind(&service_key)
+    .bind(&req.email)
+    .bind(&req.plan)
+    .bind(req.quota_daily)
     .fetch_one(&db)
     .await
     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
@@ -255,8 +252,7 @@ pub async fn update_user_handler(
     Path(id): Path<i32>,
     Json(req): Json<UpdateUserRequest>,
 ) -> Result<Json<User>, (StatusCode, String)> {
-    let user = sqlx::query_as!(
-        User,
+    let user = sqlx::query_as::<_, User>(
         r#"
         UPDATE users
         SET email = COALESCE($2, email),
@@ -266,13 +262,13 @@ pub async fn update_user_handler(
             updated_at = NOW()
         WHERE id = $1
         RETURNING id, service_key, email, plan, quota_daily, quota_used_today, is_active, created_at, updated_at
-        "#,
-        id,
-        req.email,
-        req.plan,
-        req.quota_daily,
-        req.is_active
+        "#
     )
+    .bind(id)
+    .bind(req.email.as_deref())
+    .bind(req.plan.as_deref())
+    .bind(req.quota_daily)
+    .bind(req.is_active)
     .fetch_optional(&db)
     .await
     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
@@ -285,7 +281,8 @@ pub async fn delete_user_handler(
     State(db): State<PgPool>,
     Path(id): Path<i32>,
 ) -> Result<StatusCode, (StatusCode, String)> {
-    let result = sqlx::query!("DELETE FROM users WHERE id = $1", id)
+    let result = sqlx::query("DELETE FROM users WHERE id = $1")
+        .bind(id)
         .execute(&db)
         .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
@@ -300,12 +297,12 @@ pub async fn delete_user_handler(
 pub async fn dashboard_stats_handler(
     State(db): State<PgPool>,
 ) -> Result<Json<DashboardStats>, (StatusCode, String)> {
-    let stats = sqlx::query!(
+    let stats = sqlx::query_as::<_, (i64, i64, i64)>(
         r#"
         SELECT 
-            COUNT(*) as "total!",
-            COUNT(CASE WHEN status = 'success' THEN 1 END) as "success!",
-            COUNT(CASE WHEN recall_triggered = true THEN 1 END) as "recall!"
+            COUNT(*) as "total",
+            COUNT(CASE WHEN status = 'success' THEN 1 END) as "success",
+            COUNT(CASE WHEN recall_triggered = true THEN 1 END) as "recall"
         FROM request_logs
         WHERE DATE(created_at) = CURRENT_DATE
         "#
@@ -314,21 +311,21 @@ pub async fn dashboard_stats_handler(
     .await
     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
-    let success_rate = if stats.total > 0 {
-        (stats.success as f64 / stats.total as f64) * 100.0
+    let success_rate = if stats.0 > 0 {
+        (stats.1 as f64 / stats.0 as f64) * 100.0
     } else {
         0.0
     };
 
-    let recall_rate = if stats.total > 0 {
-        (stats.recall as f64 / stats.total as f64) * 100.0
+    let recall_rate = if stats.0 > 0 {
+        (stats.2 as f64 / stats.0 as f64) * 100.0
     } else {
         0.0
     };
 
-    let p99 = sqlx::query_scalar!(
+    let p99 = sqlx::query_scalar::<_, Option<f64>>(
         r#"
-        SELECT PERCENTILE_CONT(0.99) WITHIN GROUP (ORDER BY total_latency_ms) as "p99"
+        SELECT PERCENTILE_CONT(0.99) WITHIN GROUP (ORDER BY total_latency_ms)
         FROM request_logs
         WHERE created_at >= NOW() - INTERVAL '1 hour'
         "#
@@ -338,7 +335,7 @@ pub async fn dashboard_stats_handler(
     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
     Ok(Json(DashboardStats {
-        today_requests: stats.total,
+        today_requests: stats.0,
         success_rate,
         recall_rate,
         p99_latency: p99.map(|v| v as i64),
@@ -355,18 +352,18 @@ pub async fn qps_data_handler(
         .unwrap_or(60)
         .clamp(1, 1440);
 
-    let data = sqlx::query!(
+    let data = sqlx::query_as::<_, (i64, i64)>(
         r#"
         SELECT 
-            EXTRACT(EPOCH FROM DATE_TRUNC('minute', created_at))::bigint as "minute!",
-            COUNT(*) as "qps!"
+            EXTRACT(EPOCH FROM DATE_TRUNC('minute', created_at))::bigint as "minute",
+            COUNT(*) as "qps"
         FROM request_logs
         WHERE created_at >= NOW() - INTERVAL '1 minute' * $1
         GROUP BY minute
         ORDER BY minute
-        "#,
-        minutes
+        "#
     )
+    .bind(minutes)
     .fetch_all(&db)
     .await
     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
@@ -374,8 +371,8 @@ pub async fn qps_data_handler(
     let result = data
         .into_iter()
         .map(|row| QPSDataPoint {
-            time: row.minute,
-            qps: row.qps,
+            time: row.0,
+            qps: row.1,
         })
         .collect();
 
@@ -392,19 +389,19 @@ pub async fn trend_data_handler(
         .unwrap_or(7)
         .clamp(1, 90);
 
-    let data = sqlx::query!(
+    let data = sqlx::query_as::<_, (chrono::NaiveDate, i64, i64)>(
         r#"
         SELECT 
-            DATE(created_at) as "day!",
-            COUNT(*) as "total!",
-            COUNT(CASE WHEN status = 'success' THEN 1 END) as "success!"
+            DATE(created_at) as "day",
+            COUNT(*) as "total",
+            COUNT(CASE WHEN status = 'success' THEN 1 END) as "success"
         FROM request_logs
         WHERE created_at >= CURRENT_DATE - INTERVAL '1 day' * $1
         GROUP BY day
         ORDER BY day
-        "#,
-        days
+        "#
     )
+    .bind(days)
     .fetch_all(&db)
     .await
     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
@@ -412,9 +409,9 @@ pub async fn trend_data_handler(
     let result = data
         .into_iter()
         .map(|row| TrendDataPoint {
-            date: row.day.format("%Y-%m-%d").to_string(),
-            total: row.total,
-            success: row.success,
+            date: row.0.format("%Y-%m-%d").to_string(),
+            total: row.1,
+            success: row.2,
         })
         .collect();
 
@@ -439,8 +436,7 @@ pub async fn list_logs_handler(
     let offset = (page - 1) * page_size;
 
     let logs = if let Some(uid) = user_id {
-        sqlx::query_as!(
-            RequestLog,
+        sqlx::query_as::<_, RequestLog>(
             r#"
             SELECT id, user_id, upstream_url, input_tokens, output_tokens,
                    recall_triggered, recall_latency_ms, total_latency_ms, status, error_message, created_at
@@ -448,26 +444,25 @@ pub async fn list_logs_handler(
             WHERE user_id = $1
             ORDER BY created_at DESC
             LIMIT $2 OFFSET $3
-            "#,
-            uid,
-            page_size as i64,
-            offset as i64
+            "#
         )
+        .bind(uid)
+        .bind(page_size as i64)
+        .bind(offset as i64)
         .fetch_all(&db)
         .await
     } else {
-        sqlx::query_as!(
-            RequestLog,
+        sqlx::query_as::<_, RequestLog>(
             r#"
             SELECT id, user_id, upstream_url, input_tokens, output_tokens,
                    recall_triggered, recall_latency_ms, total_latency_ms, status, error_message, created_at
             FROM request_logs
             ORDER BY created_at DESC
             LIMIT $1 OFFSET $2
-            "#,
-            page_size as i64,
-            offset as i64
+            "#
         )
+        .bind(page_size as i64)
+        .bind(offset as i64)
         .fetch_all(&db)
         .await
     }
@@ -554,11 +549,11 @@ pub struct DetailedStats {
 pub async fn detailed_stats_handler(
     State(db): State<PgPool>,
 ) -> Result<Json<DetailedStats>, (StatusCode, String)> {
-    let user_stats = sqlx::query!(
+    let user_stats = sqlx::query_as::<_, (i64, i64)>(
         r#"
         SELECT 
-            COUNT(*) as "total!",
-            COUNT(CASE WHEN is_active = true THEN 1 END) as "active!"
+            COUNT(*) as "total",
+            COUNT(CASE WHEN is_active = true THEN 1 END) as "active"
         FROM users
         "#
     )
@@ -566,13 +561,13 @@ pub async fn detailed_stats_handler(
     .await
     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
-    let request_stats = sqlx::query!(
+    let request_stats = sqlx::query_as::<_, (i64, i64, Option<f64>, i64)>(
         r#"
         SELECT 
-            COUNT(*) as "total_today!",
-            COUNT(CASE WHEN recall_triggered = true THEN 1 END) as "recall_today!",
+            COUNT(*) as "total_today",
+            COUNT(CASE WHEN recall_triggered = true THEN 1 END) as "recall_today",
             AVG(total_latency_ms) as "avg_latency",
-            COUNT(CASE WHEN status != 'success' THEN 1 END) as "errors_today!"
+            COUNT(CASE WHEN status != 'success' THEN 1 END) as "errors_today"
         FROM request_logs
         WHERE DATE(created_at) = CURRENT_DATE
         "#
@@ -586,19 +581,19 @@ pub async fn detailed_stats_handler(
         .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
-    let error_rate = if request_stats.total_today > 0 {
-        (request_stats.errors_today as f64 / request_stats.total_today as f64) * 100.0
+    let error_rate = if request_stats.0 > 0 {
+        (request_stats.3 as f64 / request_stats.0 as f64) * 100.0
     } else {
         0.0
     };
 
     Ok(Json(DetailedStats {
-        total_users: user_stats.total,
-        active_users: user_stats.active,
-        total_requests_today: request_stats.total_today,
+        total_users: user_stats.0,
+        active_users: user_stats.1,
+        total_requests_today: request_stats.0,
         total_requests_all_time: total_all_time.0,
-        avg_latency_ms: request_stats.avg_latency.unwrap_or(0.0),
-        recall_triggered_today: request_stats.recall_today,
+        avg_latency_ms: request_stats.2.unwrap_or(0.0),
+        recall_triggered_today: request_stats.1,
         error_rate_today: error_rate,
     }))
 }
