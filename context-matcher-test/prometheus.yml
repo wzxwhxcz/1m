@@ -1,0 +1,37 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    cluster: 'context-compression'
+
+# 告警规则
+rule_files:
+  - 'alerts.yml'
+
+# 抓取配置
+scrape_configs:
+  # API服务监控
+  - job_name: 'context-api'
+    static_configs:
+      - targets:
+          - 'api-1:8000'
+          - 'api-2:8000'
+          - 'api-3:8000'
+    metrics_path: '/metrics'
+    scrape_interval: 10s
+
+  # Redis监控
+  - job_name: 'redis'
+    static_configs:
+      - targets: ['redis:6379']
+
+  # Nginx监控
+  - job_name: 'nginx'
+    static_configs:
+      - targets: ['nginx:80']
+    metrics_path: '/nginx_status'
+
+  # Prometheus自监控
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']

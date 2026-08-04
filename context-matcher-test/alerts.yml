@@ -1,0 +1,73 @@
+groups:
+  - name: context_compression_alerts
+    interval: 30s
+    rules:
+      # 高延迟告警
+      - alert: HighLatency
+        expr: avg_latency_ms > 200
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "API平均延迟过高"
+          description: "平均延迟 {{ $value }}ms 超过200ms阈值"
+
+      # 极高延迟告警
+      - alert: VeryHighLatency
+        expr: avg_latency_ms > 500
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "API延迟严重过高"
+          description: "平均延迟 {{ $value }}ms 超过500ms，服务可能不可用"
+
+      # 缓存命中率低
+      - alert: LowCacheHitRate
+        expr: cache_hit_rate < 0.7
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "缓存命中率过低"
+          description: "缓存命中率 {{ $value }} 低于70%"
+
+      # 高错误率
+      - alert: HighErrorRate
+        expr: error_rate > 0.05
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "错误率过高"
+          description: "错误率 {{ $value }} 超过5%"
+
+      # 服务不健康
+      - alert: ServiceUnhealthy
+        expr: up == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "服务实例下线"
+          description: "{{ $labels.instance }} 服务不可用"
+
+      # Redis连接失败
+      - alert: RedisDown
+        expr: redis_up == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Redis服务不可用"
+          description: "Redis缓存服务连接失败"
+
+      # 内存使用过高
+      - alert: HighMemoryUsage
+        expr: (process_resident_memory_bytes / 1024 / 1024) > 4000
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "内存使用过高"
+          description: "进程内存使用 {{ $value }}MB 超过4GB"

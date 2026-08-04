@@ -1,0 +1,35 @@
+{
+  "test_name": "CAR vs Dense Retrieval",
+  "test_date": "2026-08-04 13:42:57",
+  "variant_a": {
+    "variant_name": "CAR (Cluster-based Adaptive Retrieval)",
+    "total_queries": 10,
+    "avg_latency_ms": 118.38104724884033,
+    "p50_latency_ms": 120.39017677307129,
+    "p95_latency_ms": 138.06407451629636,
+    "p99_latency_ms": 143.11727046966553,
+    "avg_precision": 0.96,
+    "avg_recall": 0.96,
+    "avg_mrr": 1.0,
+    "success_rate": 1.0,
+    "total_cost_usd": 0.0
+  },
+  "variant_b": {
+    "variant_name": "Dense Only (Baseline)",
+    "total_queries": 10,
+    "avg_latency_ms": 94.67473030090332,
+    "p50_latency_ms": 93.24228763580322,
+    "p95_latency_ms": 106.08067512512207,
+    "p99_latency_ms": 106.11088752746582,
+    "avg_precision": 0.96,
+    "avg_recall": 0.96,
+    "avg_mrr": 1.0,
+    "success_rate": 1.0,
+    "total_cost_usd": 0.0
+  },
+  "winner": "Dense Only (Baseline)",
+  "statistical_significance": true,
+  "p_value": 0.0002954598871744165,
+  "effect_size": 2.1075366996562175,
+  "recommendation": "Dense Only (Baseline) 显著优于 CAR (Cluster-based Adaptive Retrieval)（延迟更低，准确率相近）"
+}
