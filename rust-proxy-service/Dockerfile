@@ -31,7 +31,7 @@ RUN apt-get update && \
 RUN useradd -m -u 1000 proxyuser
 
 # Copy binary from builder
-COPY --from=builder /build/target/release/rust-proxy-service /app/rust-proxy-service
+COPY --from=builder /build/target/release/proxy-server /app/proxy-server
 
 # Set ownership
 RUN chown -R proxyuser:proxyuser /app
@@ -46,4 +46,4 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:8081/health || exit 1
 
 # Run the service
-CMD ["/app/rust-proxy-service"]
+CMD ["/app/proxy-server"]
