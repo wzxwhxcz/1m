@@ -1,24 +1,5 @@
-use tower_governor::{
-    governor::GovernorConfigBuilder,
-    GovernorLayer,
-};
-use std::time::Duration;
 use redis::AsyncCommands;
 use crate::error::{ProxyError, Result};
-
-pub struct RateLimitMiddleware;
-
-impl RateLimitMiddleware {
-    pub fn layer(requests_per_minute: u64) -> GovernorLayer<impl tower_governor::key_extractor::KeyExtractor, tower_governor::governor::DefaultDirectRateLimiter> {
-        let config = GovernorConfigBuilder::default()
-            .per_second(requests_per_minute / 60)
-            .burst_size(requests_per_minute as u32)
-            .finish()
-            .unwrap();
-
-        GovernorLayer { config: Box::leak(Box::new(config)) }
-    }
-}
 
 /// Redis 基于的用户速率限制
 pub struct RedisRateLimiter {

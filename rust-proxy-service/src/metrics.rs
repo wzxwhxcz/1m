@@ -78,5 +78,5 @@ pub fn gather_metrics() -> String {
     let metric_families = REGISTRY.gather();
     let mut buffer = Vec::new();
     encoder.encode(&metric_families, &mut buffer).unwrap();
-    String::from_utf8(buffer).unwrap();
+    String::from_utf8(buffer).unwrap()
 }

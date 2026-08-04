@@ -90,7 +90,7 @@ pub async fn chat_completions_handler(
     } else {
         // Non-streaming response
         state.proxy_service
-            .proxy_non_stream(&upstream_url, &api_key, request)
+            .proxy_non_stream(&upstream_url, &api_key, request, None)
             .await?
     };
 
@@ -217,7 +217,7 @@ pub async fn dynamic_chat_completions_handler(
         // Call recall service
         let recall_start = Instant::now();
         let recalled_messages = state.recall_service
-            .recall_messages(&request.messages, query, 50, "car", 10)
+            .recall_messages(&request.messages, query.to_string(), 50, "car", 10)
             .await?;
         
         let recall_duration = recall_start.elapsed();
@@ -236,17 +236,11 @@ pub async fn dynamic_chat_completions_handler(
 
     // 5. Forward to upstream
     let response = state.proxy_service
-        .forward_request(&upstream_url, &request, api_key)
+        .forward_request(&upstream_url, &request, api_key.to_string())
         .await?;
 
     let duration = start.elapsed();
     crate::metrics::REQUEST_DURATION.observe(duration.as_secs_f64());
-
-    if response.status().is_success() {
-        crate::metrics::REQUESTS_SUCCESS.inc();
-    } else {
-        crate::metrics::REQUESTS_FAILED.inc();
-    }
 
     Ok(response)
 }
