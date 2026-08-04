@@ -6,7 +6,7 @@ on:
     paths:
       - 'rust-recall-service/**'
       - 'rust-proxy-service/**'
-      - 'admin-dashboard/**'
+      - 'go-context-proxy/web/**'
       - 'docker-compose.yml'
       - '.github/workflows/docker-build.yml'
   workflow_dispatch:
@@ -32,8 +32,8 @@ jobs:
             context: ./rust-proxy-service
             dockerfile: ./rust-proxy-service/Dockerfile
           - name: admin-dashboard
-            context: ./admin-dashboard
-            dockerfile: ./admin-dashboard/Dockerfile
+            context: ./go-context-proxy/web
+            dockerfile: ./go-context-proxy/web/Dockerfile
 
     steps:
     - name: Checkout
