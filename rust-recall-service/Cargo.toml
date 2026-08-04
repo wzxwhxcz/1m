@@ -12,6 +12,7 @@ tower-http = { version = "0.6", features = ["cors", "trace"] }
 
 # Multi-tier cache (生产级缓存系统)
 multi-tier-cache = { version = "0.6", features = ["full"] }
+parking_lot = "0.12"  # multi-tier-cache 依赖
 
 # FastEmbed (本地 embedding) - 移除以避免 ONNX Runtime 编译问题
 # fastembed = { version = "3", features = ["online"] }
