@@ -7,21 +7,22 @@ edition = "2021"
 # Web framework
 axum = "0.7"
 tokio = { version = "1", features = ["full"] }
-tower = "0.4"
-tower-http = { version = "0.5", features = ["cors", "trace"] }
+tower = "0.5"
+tower-http = { version = "0.6", features = ["cors", "trace"] }
 
 # Multi-tier cache (生产级缓存系统)
 multi-tier-cache = { version = "0.6", features = ["full"] }
 
-# FastEmbed (本地 embedding)
-fastembed = "3"
+# FastEmbed (本地 embedding) - 移除以避免 ONNX Runtime 编译问题
+# fastembed = { version = "3", features = ["online"] }
+# ort = { version = "2.0.0-rc.4", features = ["download-binaries", "tls-native"] }
 
 # Serialization
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 
 # Redis
-redis = { version = "0.24", features = ["tokio-comp", "connection-manager"] }
+redis = { version = "1.5", features = ["tokio-comp", "connection-manager"] }
 
 # Metrics
 prometheus = "0.13"
@@ -32,7 +33,7 @@ futures = "0.3"
 async-trait = "0.1"
 
 # Math & ML
-ndarray = "0.15"
+ndarray = "0.16"
 
 # Logging
 tracing = "0.1"
@@ -40,10 +41,10 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
 # Error handling
 anyhow = "1"
-thiserror = "1"
+thiserror = "2"
 
 # HTTP client (for remote embedding API)
-reqwest = { version = "0.11", features = ["json"] }
+reqwest = { version = "0.12", features = ["json"] }
 
 # Utils
 bytes = "1"
