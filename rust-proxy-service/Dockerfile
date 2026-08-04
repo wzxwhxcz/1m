@@ -13,7 +13,6 @@ COPY Cargo.toml Cargo.lock ./
 
 # Copy source code
 COPY src ./src
-COPY migrations ./migrations
 
 # Build release binary
 RUN cargo build --release
@@ -33,9 +32,6 @@ RUN useradd -m -u 1000 proxyuser
 
 # Copy binary from builder
 COPY --from=builder /build/target/release/rust-proxy-service /app/rust-proxy-service
-
-# Copy migrations
-COPY --from=builder /build/migrations /app/migrations
 
 # Set ownership
 RUN chown -R proxyuser:proxyuser /app
