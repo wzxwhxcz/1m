@@ -188,8 +188,8 @@ async fn recall(
 #[derive(Serialize)]
 struct CacheStatsResponse {
     hit_rate: f64,
-    total_hits: u64,
-    total_misses: u64,
+    entry_count: u64,
+    weighted_size: u64,
 }
 
 async fn cache_stats(
@@ -199,7 +199,7 @@ async fn cache_stats(
     
     Json(CacheStatsResponse {
         hit_rate: stats.hit_rate,
-        total_hits: stats.total_hits,
-        total_misses: stats.total_misses,
+        entry_count: stats.entry_count,
+        weighted_size: stats.weighted_size,
     })
 }
