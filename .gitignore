@@ -16,7 +16,6 @@ ENV/
 
 # Rust
 target/
-Cargo.lock
 **/*.rs.bk
 
 # Go
