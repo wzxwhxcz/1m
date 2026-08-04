@@ -36,11 +36,12 @@ impl Config {
         let host = std::env::var("HOST")
             .unwrap_or_else(|_| "0.0.0.0".to_string());
 
-        let database_url = std::env::var("POSTGRES_URL")
-            .expect("POSTGRES_URL must be set");
+        let database_url = std::env::var("DATABASE_URL")
+            .or_else(|_| std::env::var("POSTGRES_URL"))
+            .unwrap_or_else(|_| "sqlite://proxy.db".to_string());
 
         let recall_urls_str = std::env::var("PYTHON_RECALL_URLS")
-            .expect("PYTHON_RECALL_URLS must be set");
+            .unwrap_or_else(|_| "http://localhost:8001".to_string());
         
         let recall_urls: Vec<String> = recall_urls_str
             .split(',')
