@@ -1,21 +1,22 @@
-use multi_tier_cache::{CacheSystem, CacheStrategy};
+use moka::future::Cache;
 use bytes::Bytes;
 use std::time::Duration;
-use crate::error::{RecallError, Result};
+use crate::error::Result;
 
-/// 高性能多层缓存管理器
-/// L1: Moka 内存缓存 (< 1ms)
-/// L2: Redis 分布式缓存 (2-5ms)
+/// 高性能内存缓存管理器
+/// 使用 Moka 提供高性能 LRU 缓存
 pub struct CacheManager {
-    cache: CacheSystem,
+    cache: Cache<String, Bytes>,
 }
 
 impl CacheManager {
     /// 创建缓存管理器
-    pub async fn new(redis_url: &str) -> Result<Self> {
-        let cache = CacheSystem::with_redis_url(redis_url)
-            .await
-            .map_err(|e| RecallError::Cache(e.to_string()))?;
+    pub async fn new(_redis_url: &str) -> Result<Self> {
+        // 创建 10000 条目，1小时 TTL 的内存缓存
+        let cache = Cache::builder()
+            .max_capacity(10_000)
+            .time_to_live(Duration::from_secs(3600))
+            .build();
         
         Ok(Self { cache })
     }
@@ -23,26 +24,19 @@ impl CacheManager {
     /// 获取 embedding 缓存
     /// 键格式: "emb:v1:{model}:{hash}"
     pub async fn get_embedding(&self, key: &str) -> Result<Option<Vec<f32>>> {
-        match self.cache.cache_manager().get(key).await {
-            Ok(Some(bytes)) => {
-                let vec: Vec<f32> = serde_json::from_slice(&bytes)
-                    .map_err(|e| RecallError::Serialization(e))?;
+        match self.cache.get(&key.to_string()).await {
+            Some(bytes) => {
+                let vec: Vec<f32> = serde_json::from_slice(&bytes)?;
                 Ok(Some(vec))
             }
-            Ok(None) => Ok(None),
-            Err(e) => Err(RecallError::Cache(e.to_string())),
+            None => Ok(None),
         }
     }
 
     /// 设置 embedding 缓存 (1小时 TTL)
     pub async fn set_embedding(&self, key: &str, embedding: &[f32]) -> Result<()> {
         let bytes = Bytes::from(serde_json::to_vec(embedding)?);
-        
-        self.cache.cache_manager()
-            .set_with_strategy(key, bytes, CacheStrategy::MediumTerm)
-            .await
-            .map_err(|e| RecallError::Cache(e.to_string()))?;
-        
+        self.cache.insert(key.to_string(), bytes).await;
         Ok(())
     }
 
@@ -68,29 +62,26 @@ impl CacheManager {
 
     /// 获取缓存统计
     pub fn get_stats(&self) -> CacheStats {
-        let stats = self.cache.cache_manager().get_stats();
+        let entry_count = self.cache.entry_count();
+        let weighted_size = self.cache.weighted_size();
         
         CacheStats {
-            hit_rate: stats.hit_rate,
-            total_hits: stats.total_hits,
-            total_misses: stats.total_misses,
+            entry_count,
+            weighted_size,
+            hit_rate: 0.0, // Moka 不提供命中率统计
         }
     }
 
     /// 清除所有缓存
     pub async fn clear_all(&self) -> Result<()> {
-        self.cache.cache_manager()
-            .invalidate_all()
-            .await
-            .map_err(|e| RecallError::Cache(e.to_string()))?;
-        
+        self.cache.invalidate_all();
         Ok(())
     }
 }
 
 #[derive(Debug, Clone)]
 pub struct CacheStats {
+    pub entry_count: u64,
+    pub weighted_size: u64,
     pub hit_rate: f64,
-    pub total_hits: u64,
-    pub total_misses: u64,
 }
