@@ -16,7 +16,17 @@ env:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            artifact_name: rust-services-linux-x64.tar.gz
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            artifact_name: rust-services-windows-x64.zip
+
+    runs-on: ${{ matrix.os }}
 
     steps:
     - uses: actions/checkout@v3
@@ -24,7 +34,7 @@ jobs:
     - name: Install Rust
       uses: dtolnay/rust-toolchain@stable
       with:
-        targets: x86_64-unknown-linux-gnu
+        targets: ${{ matrix.target }}
 
     - name: Cache cargo registry
       uses: actions/cache@v3
@@ -41,32 +51,34 @@ jobs:
     - name: Cache target directory
       uses: actions/cache@v3
       with:
-        path: |
-          rust-recall-service/target
-          rust-proxy-service/target
+        path: rust-proxy-service/target
         key: ${{ runner.os }}-cargo-build-${{ hashFiles('**/Cargo.lock') }}
-
-    - name: Build Recall Service
-      working-directory: rust-recall-service
-      run: cargo build --release --target x86_64-unknown-linux-gnu
 
     - name: Build Proxy Service
       working-directory: rust-proxy-service
-      run: cargo build --release --target x86_64-unknown-linux-gnu
+      run: cargo build --release --target ${{ matrix.target }}
 
-    - name: Package Binaries
+    - name: Package Binaries (Linux)
+      if: matrix.os == 'ubuntu-latest'
       run: |
         mkdir -p dist
-        cp rust-recall-service/target/x86_64-unknown-linux-gnu/release/rust-recall-service dist/
-        cp rust-proxy-service/target/x86_64-unknown-linux-gnu/release/rust-proxy-service dist/
+        cp rust-proxy-service/target/${{ matrix.target }}/release/rust-proxy-service dist/
         cd dist
-        tar -czf ../rust-services-linux-x64.tar.gz *
+        tar -czf ../${{ matrix.artifact_name }} *
+
+    - name: Package Binaries (Windows)
+      if: matrix.os == 'windows-latest'
+      shell: pwsh
+      run: |
+        New-Item -ItemType Directory -Force -Path dist
+        Copy-Item rust-proxy-service/target/${{ matrix.target }}/release/rust-proxy-service.exe dist/
+        Compress-Archive -Path dist/* -DestinationPath ${{ matrix.artifact_name }}
 
     - name: Upload Artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: rust-services-linux-x64
-        path: rust-services-linux-x64.tar.gz
+        name: ${{ matrix.target }}
+        path: ${{ matrix.artifact_name }}
 
   release:
     needs: build
@@ -87,6 +99,7 @@ jobs:
         draft: false
         prerelease: false
         files: |
-          rust-services-linux-x64/*.tar.gz
+          x86_64-unknown-linux-gnu/*.tar.gz
+          x86_64-pc-windows-msvc/*.zip
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
