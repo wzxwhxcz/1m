@@ -194,8 +194,18 @@ pub async fn dynamic_chat_completions_handler(
         .and_then(|v| v.to_str().ok())
         .ok_or_else(|| ProxyError::Unauthorized("Missing Authorization header".into()))?;
 
+    // 2b. Validate service_key and load user (quota & logging 依赖)
+    let user = User::find_by_service_key(&state.db, &service_key)
+        .await?
+        .ok_or(ProxyError::InvalidServiceKey)?;
+
+    if !user.has_quota() {
+        return Err(ProxyError::RateLimitExceeded);
+    }
+
     tracing::info!(
         service_key = %service_key,
+        user_id = user.id,
         upstream = %upstream_base,
         messages = request.messages.len(),
         "Dynamic proxy request"
@@ -242,6 +252,30 @@ pub async fn dynamic_chat_completions_handler(
 
     let duration = start.elapsed();
     crate::metrics::REQUEST_DURATION.observe(duration.as_secs_f64());
+
+    // 6. Increment user quota
+    user.increment_quota(&state.db).await?;
+
+    // 7. Log request (fire-and-forget)
+    let db = state.db.clone();
+    let user_id = user.id;
+    let input_tokens_i32 = input_tokens as i32;
+    let needs_recall_bool = needs_recall;
+    let total_latency = duration.as_millis() as i32;
+    let upstream_url_log = upstream_url.clone();
+    tokio::spawn(async move {
+        let _ = sqlx::query(
+            "INSERT INTO request_logs (user_id, upstream_url, input_tokens, recall_triggered, total_latency_ms, status, created_at) VALUES ($1, $2, $3, $4, $5, $6, NOW())"
+        )
+        .bind(user_id)
+        .bind(upstream_url_log)
+        .bind(input_tokens_i32)
+        .bind(needs_recall_bool)
+        .bind(total_latency)
+        .bind("success")
+        .execute(&db)
+        .await;
+    });
 
     // Convert String to Response
     Ok(Response::builder()
