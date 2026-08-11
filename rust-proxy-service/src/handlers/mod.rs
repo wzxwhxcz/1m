@@ -31,6 +31,16 @@ pub struct AppState {
 const CONTEXT_THRESHOLD: usize = 1000000; // 1M tokens
 const RECALL_TARGET: usize = 400000; // 400K tokens
 
+/// 基于 token 预算动态计算召回条数 k：
+/// k ≈ RECALL_TARGET(400K) / 平均每条消息的 tokens，
+/// 使召回后的上下文尽量贴近 400K 目标（而非固定条数）。
+/// 例如 1M tokens / 5000 条消息 → 平均 200 tokens/条 → k = 400000/200 = 2000 条
+/// 例如 1M tokens / 200 条长消息 → 平均 5000 tokens/条 → k = 400000/5000 = 80 条
+fn compute_dynamic_k(input_tokens: usize, message_count: usize) -> usize {
+    let avg_tokens_per_msg = (input_tokens / message_count.max(1)).max(1);
+    (RECALL_TARGET / avg_tokens_per_msg).clamp(1, message_count.max(1))
+}
+
 pub async fn chat_completions_handler(
     State(state): State<AppState>,
     Extension(user): Extension<User>,
@@ -55,8 +65,8 @@ pub async fn chat_completions_handler(
             .map(|m| m.content.clone())
             .unwrap_or_default();
 
-        // Calculate k based on target
-        let k = (RECALL_TARGET / 100).min(request.messages.len());
+        // Calculate k based on token budget (dynamic)
+        let k = compute_dynamic_k(input_tokens, request.messages.len());
 
         // Call recall service
         let recall_response = state.recall_service
@@ -225,10 +235,11 @@ pub async fn dynamic_chat_completions_handler(
             .map(|m| m.content.as_str())
             .unwrap_or("");
 
-        // Call recall service
+        // Call recall service with dynamic k (token-budget aware)
         let recall_start = Instant::now();
+        let k = compute_dynamic_k(input_tokens, request.messages.len());
         let recalled_messages = state.recall_service
-            .recall_messages(&request.messages, query.to_string(), 50, "car", 10)
+            .recall_messages(&request.messages, query.to_string(), k, "car", 10)
             .await?;
         
         let recall_duration = recall_start.elapsed();
