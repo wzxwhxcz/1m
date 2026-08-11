@@ -1,5 +1,5 @@
 # Multi-stage build for Rust Proxy Service
-FROM rust:1.85-slim as builder
+FROM rust:1.97-slim as builder
 
 WORKDIR /build
 
