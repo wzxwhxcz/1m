@@ -30,8 +30,8 @@ pub async fn initialize_schema(pool: &DbPool) -> Result<()> {
             quota_daily INTEGER DEFAULT 100,
             quota_used_today INTEGER DEFAULT 0,
             is_active BOOLEAN DEFAULT true,
-            created_at TIMESTAMP DEFAULT NOW(),
-            updated_at TIMESTAMP DEFAULT NOW()
+            created_at TIMESTAMPTZ DEFAULT NOW(),
+            updated_at TIMESTAMPTZ DEFAULT NOW()
         )
         "#
     )
@@ -51,7 +51,7 @@ pub async fn initialize_schema(pool: &DbPool) -> Result<()> {
             total_latency_ms INTEGER,
             status VARCHAR(32),
             error_message TEXT,
-            created_at TIMESTAMP DEFAULT NOW()
+            created_at TIMESTAMPTZ DEFAULT NOW()
         )
         "#
     )
@@ -64,7 +64,7 @@ pub async fn initialize_schema(pool: &DbPool) -> Result<()> {
             id SERIAL PRIMARY KEY,
             username VARCHAR(64) UNIQUE NOT NULL,
             password_hash VARCHAR(255) NOT NULL,
-            created_at TIMESTAMP DEFAULT NOW()
+            created_at TIMESTAMPTZ DEFAULT NOW()
         )
         "#
     )
