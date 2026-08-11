@@ -19,6 +19,7 @@ pub async fn create_pool(database_url: &str, max_connections: u32, min_connectio
 
 // 数据库初始化脚本
 pub async fn initialize_schema(pool: &DbPool) -> Result<()> {
+    // PostgreSQL 预编译语句不支持多命令，必须逐条执行
     sqlx::query(
         r#"
         CREATE TABLE IF NOT EXISTS users (
@@ -31,8 +32,14 @@ pub async fn initialize_schema(pool: &DbPool) -> Result<()> {
             is_active BOOLEAN DEFAULT true,
             created_at TIMESTAMP DEFAULT NOW(),
             updated_at TIMESTAMP DEFAULT NOW()
-        );
+        )
+        "#
+    )
+    .execute(pool)
+    .await?;
 
+    sqlx::query(
+        r#"
         CREATE TABLE IF NOT EXISTS request_logs (
             id BIGSERIAL PRIMARY KEY,
             user_id INTEGER REFERENCES users(id),
@@ -45,11 +52,33 @@ pub async fn initialize_schema(pool: &DbPool) -> Result<()> {
             status VARCHAR(32),
             error_message TEXT,
             created_at TIMESTAMP DEFAULT NOW()
-        );
-
-        CREATE INDEX IF NOT EXISTS idx_user_key ON users(service_key);
-        CREATE INDEX IF NOT EXISTS idx_logs_user_time ON request_logs(user_id, created_at);
+        )
         "#
+    )
+    .execute(pool)
+    .await?;
+
+    sqlx::query(
+        r#"
+        CREATE TABLE IF NOT EXISTS admins (
+            id SERIAL PRIMARY KEY,
+            username VARCHAR(64) UNIQUE NOT NULL,
+            password_hash VARCHAR(255) NOT NULL,
+            created_at TIMESTAMP DEFAULT NOW()
+        )
+        "#
+    )
+    .execute(pool)
+    .await?;
+
+    sqlx::query(
+        "CREATE INDEX IF NOT EXISTS idx_user_key ON users(service_key)"
+    )
+    .execute(pool)
+    .await?;
+
+    sqlx::query(
+        "CREATE INDEX IF NOT EXISTS idx_logs_user_time ON request_logs(user_id, created_at)"
     )
     .execute(pool)
     .await?;
