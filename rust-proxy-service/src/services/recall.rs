@@ -16,6 +16,8 @@ impl RecallService {
     pub fn new(urls: Vec<String>, timeout_secs: u64) -> Self {
         let client = Client::builder()
             .timeout(Duration::from_secs(timeout_secs))
+            // 与 ProxyService 一致：直连 recall 服务，不走系统代理
+            .no_proxy()
             .build()
             .unwrap();
 

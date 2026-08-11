@@ -13,6 +13,9 @@ impl ProxyService {
     pub fn new(timeout_secs: u64) -> Self {
         let client = Client::builder()
             .timeout(Duration::from_secs(timeout_secs))
+            // 代理服务必须直连上游，不能继承桌面系统的代理设置
+            // （否则本地/内网上游会被系统代理拦截返回 502）
+            .no_proxy()
             .build()
             .unwrap();
 
