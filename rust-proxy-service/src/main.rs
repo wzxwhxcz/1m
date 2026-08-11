@@ -2,6 +2,7 @@ use axum::{
     routing::{get, post, put, delete},
     Router,
     middleware,
+    extract::DefaultBodyLimit,
 };
 use std::sync::Arc;
 use tower_http::{
@@ -136,7 +137,10 @@ async fn main() -> anyhow::Result<()> {
         // Middleware
         .layer(CorsLayer::permissive())
         .layer(TraceLayer::new_for_http())
-        .layer(TimeoutLayer::new(Duration::from_secs(300)));
+        .layer(TimeoutLayer::new(Duration::from_secs(300)))
+        // 压缩代理需要接收 1M token 级别的大上下文（>4MB），
+        // Axum 默认 2MB 请求体上限会拒绝这类请求（413）
+        .layer(DefaultBodyLimit::max(50 * 1024 * 1024));
 
     // Start server
     let addr = format!("{}:{}", config.server.host, config.server.port);
