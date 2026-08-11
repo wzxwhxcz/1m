@@ -105,7 +105,7 @@ pub struct RequestLog {
     user_id: Option<i32>,
     upstream_url: String,
     input_tokens: i32,
-    output_tokens: i32,
+    output_tokens: Option<i32>,
     recall_triggered: bool,
     recall_latency_ms: Option<i32>,
     total_latency_ms: i32,
