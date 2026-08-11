@@ -5,18 +5,6 @@ import axios from 'axios';
 
 const { Title, Paragraph, Text } = Typography;
 
-interface SystemConfig {
-  oauth_client_id: string;
-  oauth_client_secret: string;
-  oauth_redirect_uri: string;
-  default_plan_free: string;
-  default_plan_trust_0: string;
-  default_plan_trust_1: string;
-  default_plan_trust_2: string;
-  default_plan_trust_3: string;
-  default_plan_trust_4: string;
-}
-
 const AdminSettingsPage: React.FC = () => {
   const [oauthForm] = Form.useForm();
   const [planForm] = Form.useForm();

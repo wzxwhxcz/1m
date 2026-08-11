@@ -71,7 +71,7 @@ export interface RequestLog {
 export const userService = {
   // Linux Do OAuth 回调
   linuxDoCallback: (code: string) =>
-    userClient.post('/api/user/auth/linuxdo/callback', { code }),
+    userClient.post<any, { token: string; user: User }>('/api/user/auth/linuxdo/callback', { code }),
 
   // 获取用户信息
   getProfile: () => userClient.get<any, User>('/api/user/profile'),
@@ -84,9 +84,9 @@ export const userService = {
     userClient.get<any, QuotaTrend[]>('/api/user/trend', { params: { days } }),
 
   // 重置 API 密钥
-  resetKey: () => userClient.post('/api/user/reset-key'),
+  resetKey: () => userClient.post<any, { new_service_key: string }>('/api/user/reset-key'),
 
   // 获取请求日志
   getLogs: (page: number = 1, pageSize: number = 20) =>
-    userClient.get('/api/user/logs', { params: { page, page_size: pageSize } }),
+    userClient.get<any, { logs: RequestLog[], total: number }>('/api/user/logs', { params: { page, page_size: pageSize } }),
 };

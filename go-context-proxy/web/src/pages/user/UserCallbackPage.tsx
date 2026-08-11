@@ -19,7 +19,7 @@ const UserCallbackPage: React.FC = () => {
       }
 
       try {
-        const result = await userService.oauthCallback(code);
+        const result = await userService.linuxDoCallback(code);
         
         // 保存 token 和用户信息
         localStorage.setItem('user_token', result.token);

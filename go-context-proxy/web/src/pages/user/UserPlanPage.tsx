@@ -110,8 +110,8 @@ const UserPlanPage: React.FC = () => {
       >
         <Row gutter={24} align="middle">
           <Col flex="auto">
-            <Space direction="vertical" size="small">
-              <Tag color={currentPlan.color} style={{ fontSize: 14, padding: '4px 12px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <Tag color={currentPlan.color} style={{ fontSize: 14, padding: '4px 12px', width: 'fit-content' }}>
                 当前套餐
               </Tag>
               <Title level={3} style={{ margin: 0, color: currentPlan.color }}>
@@ -120,7 +120,7 @@ const UserPlanPage: React.FC = () => {
               <Text type="secondary">
                 每日配额: <Text strong style={{ fontSize: 16 }}>{quota_daily.toLocaleString()}</Text> 次请求
               </Text>
-            </Space>
+            </div>
           </Col>
           <Col>
             <div style={{ textAlign: 'center' }}>

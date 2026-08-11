@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { Card, Table, Tag, Typography, Space, DatePicker, Select, Button } from 'antd';
 import { CheckCircleOutlined, CloseCircleOutlined, ThunderboltOutlined } from '@ant-design/icons';
-import { userService, RequestLog } from '../../services/userApi';
+import { userService } from '../../services/userApi';
+import type { RequestLog } from '../../services/userApi';
 import dayjs from 'dayjs';
 
 const { Title } = Typography;

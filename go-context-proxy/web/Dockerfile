@@ -1,5 +1,6 @@
 # 多阶段构建：构建阶段
-FROM node:18-alpine AS builder
+# vite 8 / @vitejs/plugin-react 6 要求 node ^20.19.0 || >=22.12.0
+FROM node:22-alpine AS builder
 
 WORKDIR /app
 

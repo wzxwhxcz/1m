@@ -159,7 +159,8 @@ app.get('/api/admin/stats/dashboard', (req, res) => {
     code: 0,
     message: 'success',
     data: {
-      total_requests: totalQuotaUsed, // 基于用户实际使用量
+      today_requests: Math.floor(totalQuotaUsed * 0.3), // 今日请求数
+      total_requests: totalQuotaUsed, // 总请求数
       success_rate: 99.2,
       avg_latency: 45,
       recall_triggered: Math.floor(totalQuotaUsed * 0.15), // 约15%触发召回
@@ -826,6 +827,34 @@ app.post('/:service_key/https\\://api.openai.com/v1/chat/completions', async (re
   
   // 更新用户配额
   user.quota_used += 1;
+});
+
+// ==================== 系统配置 API ====================
+// GET /api/admin/config - 获取系统配置
+app.get('/api/admin/config', (req, res) => {
+  res.json({
+    code: 0,
+    message: 'success',
+    data: {
+      max_context_tokens: 400000,
+      compression_ratio: 2.5,
+      model_provider: 'openai',
+      cache_enabled: true,
+      recall_enabled: true,
+      max_concurrent_requests: 100,
+    },
+  });
+});
+
+// PUT /api/admin/config - 更新系统配置
+app.put('/api/admin/config', (req, res) => {
+  const config = req.body;
+  console.log('更新系统配置:', config);
+  res.json({
+    code: 0,
+    message: '配置更新成功',
+    data: config,
+  });
 });
 
 app.listen(PORT, () => {

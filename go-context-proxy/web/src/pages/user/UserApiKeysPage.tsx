@@ -27,7 +27,7 @@ const UserApiKeysPage: React.FC = () => {
       onOk: async () => {
         setResetting(true);
         try {
-          const result = await userService.resetApiKey();
+          const result = await userService.resetKey();
           setServiceKey(result.new_service_key);
           
           // 更新 localStorage

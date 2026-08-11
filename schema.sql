@@ -1,0 +1,2 @@
+-- Quick SQL to create tables via sqlx
+-- This will be embedded in the binary for auto-migration

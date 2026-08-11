@@ -42,11 +42,12 @@ export interface RequestLog {
 // 统计数据类型
 export interface DashboardStats {
   today_requests: number;
-  today_success_rate: number;
-  today_recall_rate: number;
-  p99_latency: number;
+  total_requests: number;
+  success_rate: number;
+  avg_latency: number;
+  recall_triggered: number;
   active_users: number;
-  total_tokens: number;
+  error_rate: number;
 }
 
 export interface QPSData {

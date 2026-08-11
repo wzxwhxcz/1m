@@ -1,32 +1,29 @@
 import React, { useEffect, useState } from 'react';
-import { Card, Row, Col, Statistic, Typography, message, Space, Avatar, Button, Divider } from 'antd';
-import { Line } from '@ant-design/charts';
+import { Card, Row, Col, Statistic, Typography, message, Avatar, Button, Divider } from 'antd';
 import { CopyOutlined, ThunderboltOutlined, ClockCircleOutlined, ApiOutlined, RocketOutlined } from '@ant-design/icons';
-import { userService, User, UserStats, QuotaTrend } from '../../services/userApi';
+import { userService } from '../../services/userApi';
+import type { User, UserStats } from '../../services/userApi';
 
 const { Title, Paragraph, Text } = Typography;
 
 const UserDashboardPage: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
   const [stats, setStats] = useState<UserStats | null>(null);
-  const [trendData, setTrendData] = useState<QuotaTrend[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    loadData();
+    fetchData();
   }, []);
 
-  const loadData = async () => {
+  const fetchData = async () => {
     try {
-      const [userInfo, statsData, trend] = await Promise.all([
+      const [userInfo, statsData] = await Promise.all([
         userService.getProfile(),
         userService.getStats(),
-        userService.getQuotaTrend(7),
       ]);
       
       setUser(userInfo);
       setStats(statsData);
-      setTrendData(trend);
     } catch (error: any) {
       message.error(error.message || '加载数据失败');
     } finally {
@@ -41,48 +38,7 @@ const UserDashboardPage: React.FC = () => {
     }
   };
 
-  const chartConfig = {
-    data: trendData,
-    xField: 'date',
-    yField: 'used',
-    smooth: true,
-    color: '#5B8CFF',
-    point: {
-      size: 4,
-      shape: 'circle',
-      style: {
-        fill: '#5B8CFF',
-        stroke: '#fff',
-        lineWidth: 2,
-      },
-    },
-    line: {
-      style: {
-        lineWidth: 3,
-      },
-    },
-    yAxis: {
-      label: {
-        formatter: (v: string) => `${v}`,
-      },
-    },
-    xAxis: {
-      label: {
-        formatter: (v: string) => {
-          const date = new Date(v);
-          return `${date.getMonth() + 1}/${date.getDate()}`;
-        },
-      },
-    },
-    tooltip: {
-      formatter: (datum: any) => {
-        return {
-          name: '已用配额',
-          value: `${datum.used} / ${datum.quota}`,
-        };
-      },
-    },
-  };
+  // chartConfig 已移除，不再使用 @ant-design/charts
 
   if (loading) {
     return <div style={{ padding: 24 }}>加载中...</div>;
@@ -92,8 +48,8 @@ const UserDashboardPage: React.FC = () => {
     <div style={{ padding: 24, background: '#f5f5f5', minHeight: '100vh' }}>
       {/* 用户信息卡片 */}
       <Card style={{ marginBottom: 24, borderRadius: 8 }}>
-        <Space size="large" align="start" style={{ width: '100%' }}>
-          <Avatar size={80} src={user?.avatar_url} style={{ background: '#5B8CFF' }}>
+        <div style={{ display: 'flex', gap: 24, alignItems: 'flex-start' }}>
+          <Avatar size={80} style={{ background: '#5B8CFF' }}>
             {user?.username?.[0]?.toUpperCase()}
           </Avatar>
           
@@ -103,37 +59,33 @@ const UserDashboardPage: React.FC = () => {
             </Title>
             <Text type="secondary">{user?.email}</Text>
             
-            <div style={{ marginTop: 16 }}>
-              <Space>
-                <Text strong>API 密钥:</Text>
-                <Text code style={{ fontSize: 14 }}>
-                  {user?.service_key}
-                </Text>
-                <Button
-                  type="link"
-                  size="small"
-                  icon={<CopyOutlined />}
-                  onClick={copyServiceKey}
-                  style={{ color: '#5B8CFF' }}
-                >
-                  复制
-                </Button>
-              </Space>
+            <div style={{ marginTop: 16, display: 'flex', gap: 8, alignItems: 'center' }}>
+              <Text strong>API 密钥:</Text>
+              <Text code style={{ fontSize: 14 }}>
+                {user?.service_key}
+              </Text>
+              <Button
+                type="link"
+                size="small"
+                icon={<CopyOutlined />}
+                onClick={copyServiceKey}
+                style={{ color: '#5B8CFF' }}
+              >
+                复制
+              </Button>
             </div>
             
-            <div style={{ marginTop: 8 }}>
-              <Space>
-                <Text type="secondary">套餐:</Text>
-                <Text strong style={{ color: '#5B8CFF', textTransform: 'capitalize' }}>
-                  {user?.plan}
-                </Text>
-                <Divider type="vertical" />
-                <Text type="secondary">Trust Level:</Text>
-                <Text strong>{user?.trust_level}</Text>
-              </Space>
+            <div style={{ marginTop: 8, display: 'flex', gap: 8, alignItems: 'center' }}>
+              <Text type="secondary">套餐:</Text>
+              <Text strong style={{ color: '#5B8CFF', textTransform: 'capitalize' }}>
+                {user?.plan}
+              </Text>
+              <Divider type="vertical" />
+              <Text type="secondary">Trust Level:</Text>
+              <Text strong>{user?.trust_level}</Text>
             </div>
           </div>
-        </Space>
+        </div>
       </Card>
 
       {/* 统计卡片 */}
@@ -187,7 +139,9 @@ const UserDashboardPage: React.FC = () => {
 
       {/* 配额使用趋势 */}
       <Card title="7日配额使用趋势" style={{ marginBottom: 24, borderRadius: 8 }}>
-        <Line {...chartConfig} height={300} />
+        <div style={{ height: 300, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#999' }}>
+          图表功能需要安装 @ant-design/charts
+        </div>
       </Card>
 
       {/* API 使用示例 */}

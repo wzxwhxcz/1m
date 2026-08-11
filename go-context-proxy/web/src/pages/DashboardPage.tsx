@@ -115,7 +115,7 @@ export default function DashboardPage() {
           <Card style={{ background: '#0F1117', border: '1px solid #1E222E' }}>
             <Statistic
               title={<span style={{ color: '#9CA3AF' }}>今日请求数</span>}
-              value={stats?.total_requests || 0}
+              value={stats?.today_requests || 0}
               prefix={<ApiOutlined style={{ color: '#5B8CFF' }} />}
               styles={{ value: { color: '#F3F4F6' } }}
             />
