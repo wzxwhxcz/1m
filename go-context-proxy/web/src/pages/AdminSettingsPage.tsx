@@ -8,6 +8,7 @@ const { Title, Paragraph, Text } = Typography;
 const AdminSettingsPage: React.FC = () => {
   const [oauthForm] = Form.useForm();
   const [planForm] = Form.useForm();
+  const [compressForm] = Form.useForm();
   const [loading, setLoading] = useState(false);
 
   React.useEffect(() => {
@@ -18,7 +19,7 @@ const AdminSettingsPage: React.FC = () => {
     try {
       const response = await axios.get('/api/admin/config');
       const config = response.data.data;
-      
+
       oauthForm.setFieldsValue({
         oauth_client_id: config.oauth_client_id,
         oauth_client_secret: config.oauth_client_secret,
@@ -33,8 +34,34 @@ const AdminSettingsPage: React.FC = () => {
         default_plan_trust_3: config.default_plan_trust_3,
         default_plan_trust_4: config.default_plan_trust_4,
       });
+
+      compressForm.setFieldsValue({
+        recall_threshold: config.recall_threshold,
+        recall_target: config.recall_target,
+        rate_limit_per_minute: config.rate_limit_per_minute,
+        max_context_length: config.max_context_length,
+        upstream_timeout_secs: config.upstream_timeout_secs,
+      });
     } catch (error) {
       message.error('加载配置失败');
+    }
+  };
+
+  const handleSaveCompress = async (values: any) => {
+    setLoading(true);
+    try {
+      await Promise.all([
+        axios.put('/api/admin/config', { key: 'recall_threshold', value: String(values.recall_threshold) }),
+        axios.put('/api/admin/config', { key: 'recall_target', value: String(values.recall_target) }),
+        axios.put('/api/admin/config', { key: 'rate_limit_per_minute', value: String(values.rate_limit_per_minute) }),
+        axios.put('/api/admin/config', { key: 'max_context_length', value: String(values.max_context_length) }),
+        axios.put('/api/admin/config', { key: 'upstream_timeout_secs', value: String(values.upstream_timeout_secs) }),
+      ]);
+      message.success('压缩参数已保存，立即生效');
+    } catch (error) {
+      message.error('保存失败');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -76,6 +103,76 @@ const AdminSettingsPage: React.FC = () => {
   return (
     <div style={{ padding: 24 }}>
       <Title level={2}>系统配置</Title>
+
+      {/* 压缩参数（实时生效） */}
+      <Card
+        title="压缩参数（实时生效）"
+        style={{ marginBottom: 24, background: '#1E222E', borderColor: '#2a2f3d' }}
+        headStyle={{ color: '#fff', borderBottomColor: '#2a2f3d' }}
+      >
+        <Paragraph style={{ color: '#9ca3af', marginBottom: 24 }}>
+          控制 1M→400K 上下文压缩的行为。保存后立即生效，无需重启服务。
+        </Paragraph>
+
+        <Form
+          form={compressForm}
+          layout="vertical"
+          onFinish={handleSaveCompress}
+        >
+          <Form.Item
+            label={<span style={{ color: '#e5e7eb' }}>触发压缩的上下文阈值 recall_threshold（tokens）</span>}
+            name="recall_threshold"
+            rules={[{ required: true, message: '请输入阈值' }]}
+          >
+            <Input type="number" placeholder="1000000" size="large" />
+          </Form.Item>
+
+          <Form.Item
+            label={<span style={{ color: '#e5e7eb' }}>压缩目标 recall_target（tokens）</span>}
+            name="recall_target"
+            rules={[{ required: true, message: '请输入目标' }]}
+          >
+            <Input type="number" placeholder="400000" size="large" />
+          </Form.Item>
+
+          <Form.Item
+            label={<span style={{ color: '#e5e7eb' }}>每分钟限流 rate_limit_per_minute</span>}
+            name="rate_limit_per_minute"
+            rules={[{ required: true, message: '请输入限流值' }]}
+          >
+            <Input type="number" placeholder="60" size="large" />
+          </Form.Item>
+
+          <Form.Item
+            label={<span style={{ color: '#e5e7eb' }}>最大输入 tokens max_context_length</span>}
+            name="max_context_length"
+            rules={[{ required: true, message: '请输入最大值' }]}
+          >
+            <Input type="number" placeholder="2000000" size="large" />
+          </Form.Item>
+
+          <Form.Item
+            label={<span style={{ color: '#e5e7eb' }}>上游请求超时 upstream_timeout_secs（秒）</span>}
+            name="upstream_timeout_secs"
+            rules={[{ required: true, message: '请输入超时' }]}
+          >
+            <Input type="number" placeholder="300" size="large" />
+          </Form.Item>
+
+          <Form.Item>
+            <Button
+              type="primary"
+              htmlType="submit"
+              icon={<SaveOutlined />}
+              loading={loading}
+              size="large"
+              style={{ background: '#5B8CFF', borderColor: '#5B8CFF' }}
+            >
+              保存压缩参数
+            </Button>
+          </Form.Item>
+        </Form>
+      </Card>
 
       {/* OAuth 配置 */}
       <Card
