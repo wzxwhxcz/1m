@@ -8,7 +8,7 @@ use jsonwebtoken::{decode, DecodingKey, Validation};
 use serde::{Deserialize, Serialize};
 use crate::handlers::AppState;
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Claims {
     pub sub: i32,
     pub username: String,
@@ -33,7 +33,6 @@ pub async fn jwt_auth_middleware(
     // 密钥来自运行时配置（JWT_SECRET 或随机），算法固定 HS256 + 校验 exp
     let mut validation = Validation::default();
     validation.validate_exp = true;
-    validation.required_spec_claims = vec!["exp".to_string()];
 
     let token_data = decode::<Claims>(
         token,

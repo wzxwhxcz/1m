@@ -39,9 +39,8 @@ fn client_ip(headers: &axum::http::HeaderMap) -> String {
 
 fn check_login_rate_limit(ip: &str) -> Result<(), (StatusCode, String)> {
     let mut map = login_attempts().lock().map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "lock poisoned".into()))?;
-    let now = Instant::now();
     if let Some((count, start)) = map.get(ip) {
-        if *start.elapsed() >= LOGIN_WINDOW {
+        if start.elapsed() >= LOGIN_WINDOW {
             map.remove(ip);
         } else if *count >= LOGIN_MAX_ATTEMPTS {
             return Err((StatusCode::TOO_MANY_REQUESTS, "Too many login attempts, try again later".into()));
