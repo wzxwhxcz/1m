@@ -8,8 +8,65 @@ use sqlx::{PgPool, Row};
 use chrono::{DateTime, Utc};
 use jsonwebtoken::{encode, EncodingKey, Header};
 use bcrypt::verify;
+use std::collections::HashMap;
+use std::sync::{Mutex, OnceLock};
+use std::time::{Duration, Instant};
 
-const JWT_SECRET: &[u8] = b"context-proxy-secret-key-change-in-production";
+use crate::{
+    config::RuntimeConfig,
+    handlers::AppState,
+    models::{get_system_config_all, set_system_config},
+};
+
+// 登录暴力破解防护：按 IP 限制，5 次/5 分钟
+const LOGIN_MAX_ATTEMPTS: u32 = 5;
+const LOGIN_WINDOW: Duration = Duration::from_secs(300);
+static LOGIN_ATTEMPTS: OnceLock<Mutex<HashMap<String, (u32, Instant)>>> = OnceLock::new();
+
+fn login_attempts() -> &'static Mutex<HashMap<String, (u32, Instant)>> {
+    LOGIN_ATTEMPTS.get_or_init(|| Mutex::new(HashMap::new()))
+}
+
+fn client_ip(headers: &axum::http::HeaderMap) -> String {
+    headers
+        .get("x-forwarded-for")
+        .and_then(|v| v.to_str().ok())
+        .and_then(|v| v.split(',').next())
+        .map(|s| s.trim().to_string())
+        .filter(|s| !s.is_empty())
+        .unwrap_or_else(|| "unknown".to_string())
+}
+
+fn check_login_rate_limit(ip: &str) -> Result<(), (StatusCode, String)> {
+    let mut map = login_attempts().lock().map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "lock poisoned".into()))?;
+    let now = Instant::now();
+    if let Some((count, start)) = map.get(ip) {
+        if *start.elapsed() >= LOGIN_WINDOW {
+            map.remove(ip);
+        } else if *count >= LOGIN_MAX_ATTEMPTS {
+            return Err((StatusCode::TOO_MANY_REQUESTS, "Too many login attempts, try again later".into()));
+        }
+    }
+    Ok(())
+}
+
+fn record_login_failure(ip: &str) {
+    if let Ok(mut map) = login_attempts().lock() {
+        let now = Instant::now();
+        let entry = map.entry(ip.to_string()).or_insert((0, now));
+        if entry.1.elapsed() >= LOGIN_WINDOW {
+            *entry = (1, now);
+        } else {
+            entry.0 += 1;
+        }
+    }
+}
+
+fn clear_login_failures(ip: &str) {
+    if let Ok(mut map) = login_attempts().lock() {
+        map.remove(ip);
+    }
+}
 
 // JWT Claims
 #[derive(Debug, Serialize, Deserialize)]
@@ -122,26 +179,37 @@ pub struct LogListResponse {
 
 // Handlers
 pub async fn login_handler(
-    State(db): State<PgPool>,
+    State(state): State<AppState>,
+    headers: axum::http::HeaderMap,
     Json(req): Json<LoginRequest>,
 ) -> Result<Json<LoginResponse>, (StatusCode, String)> {
+    // 暴力破解防护：按 IP 限流
+    let ip = client_ip(&headers);
+    check_login_rate_limit(&ip)?;
+
     // Query admin from database
     let admin = sqlx::query_as::<_, (i32, String, String)>(
         r#"SELECT id, username, password_hash FROM admins WHERE username = $1"#
     )
     .bind(&req.username)
-    .fetch_optional(&db)
+    .fetch_optional(&state.db)
     .await
     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
-    .ok_or((StatusCode::UNAUTHORIZED, "用户名或密码错误".to_string()))?;
+    .ok_or_else(|| {
+        record_login_failure(&ip);
+        (StatusCode::UNAUTHORIZED, "用户名或密码错误".to_string())
+    })?;
 
     // Verify password
     let valid = verify(&req.password, &admin.2)
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
     if !valid {
+        record_login_failure(&ip);
         return Err((StatusCode::UNAUTHORIZED, "用户名或密码错误".to_string()));
     }
+
+    clear_login_failures(&ip);
 
     // Generate JWT
     let exp = (chrono::Utc::now() + chrono::Duration::hours(24)).timestamp();
@@ -154,7 +222,7 @@ pub async fn login_handler(
     let token = encode(
         &Header::default(),
         &claims,
-        &EncodingKey::from_secret(JWT_SECRET),
+        &EncodingKey::from_secret(&state.jwt_secret),
     )
     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
@@ -546,52 +614,87 @@ pub async fn list_logs_handler(
     }))
 }
 
-// 系统配置相关
+// 系统配置相关（持久化到 system_config 表，实时生效）
 #[derive(Debug, Serialize)]
 pub struct SystemConfig {
     recall_service_urls: Vec<String>,
-    recall_threshold: i32,
-    rate_limit_per_minute: i32,
-    max_context_length: i32,
+    recall_threshold: usize,
+    recall_target: usize,
+    rate_limit_per_minute: u32,
+    max_context_length: usize,
+    upstream_timeout_secs: u64,
 }
 
 #[derive(Debug, Deserialize)]
 pub struct UpdateSystemConfigRequest {
     recall_service_urls: Option<Vec<String>>,
-    recall_threshold: Option<i32>,
-    rate_limit_per_minute: Option<i32>,
-    max_context_length: Option<i32>,
+    recall_threshold: Option<usize>,
+    recall_target: Option<usize>,
+    rate_limit_per_minute: Option<u32>,
+    max_context_length: Option<usize>,
+    upstream_timeout_secs: Option<u64>,
+    // 兼容前端 { key, value } 单字段更新模式
+    key: Option<String>,
+    value: Option<String>,
 }
 
-pub async fn get_system_config_handler(
-    State(_db): State<PgPool>,
-) -> Result<Json<SystemConfig>, (StatusCode, String)> {
-    // 简化版：返回硬编码配置，实际应该从数据库或配置文件读取
-    Ok(Json(SystemConfig {
+fn to_system_config(cfg: &RuntimeConfig) -> SystemConfig {
+    SystemConfig {
         recall_service_urls: vec![
             "http://localhost:8001".to_string(),
             "http://localhost:8002".to_string(),
         ],
-        recall_threshold: 400_000,
-        rate_limit_per_minute: 60,
-        max_context_length: 1_000_000,
-    }))
+        recall_threshold: cfg.recall_threshold,
+        recall_target: cfg.recall_target,
+        rate_limit_per_minute: cfg.rate_limit_per_minute,
+        max_context_length: cfg.max_context_length,
+        upstream_timeout_secs: cfg.upstream_timeout_secs,
+    }
+}
+
+pub async fn get_system_config_handler(
+    State(state): State<AppState>,
+) -> Result<Json<SystemConfig>, (StatusCode, String)> {
+    let map = get_system_config_all(&state.db)
+        .await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    let cfg = RuntimeConfig::from_map(&map);
+    Ok(Json(to_system_config(&cfg)))
 }
 
 pub async fn update_system_config_handler(
-    State(_db): State<PgPool>,
+    State(state): State<AppState>,
     Json(req): Json<UpdateSystemConfigRequest>,
 ) -> Result<Json<SystemConfig>, (StatusCode, String)> {
-    // TODO: 实现配置更新逻辑
-    // 这里简化处理，实际应该持久化到数据库
-    Ok(Json(SystemConfig {
-        recall_service_urls: req.recall_service_urls.unwrap_or_else(|| vec![
-            "http://localhost:8001".to_string(),
-        ]),
-        recall_threshold: req.recall_threshold.unwrap_or(400_000),
-        rate_limit_per_minute: req.rate_limit_per_minute.unwrap_or(60),
-        max_context_length: req.max_context_length.unwrap_or(1_000_000),
-    }))
+    // 单字段 { key, value } 模式（前端表单逐项保存）
+    if let (Some(k), Some(v)) = (req.key.as_deref(), req.value.as_deref()) {
+        set_system_config(&state.db, k, v)
+            .await
+            .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    } else {
+        // 多字段模式
+        let updates: Vec<(&str, String)> = [
+            ("recall_threshold", req.recall_threshold.map(|v| v.to_string())),
+            ("recall_target", req.recall_target.map(|v| v.to_string())),
+            ("rate_limit_per_minute", req.rate_limit_per_minute.map(|v| v.to_string())),
+            ("max_context_length", req.max_context_length.map(|v| v.to_string())),
+            ("upstream_timeout_secs", req.upstream_timeout_secs.map(|v| v.to_string())),
+        ].into_iter().filter_map(|(k, v)| v.map(|v| (k, v))).collect();
+        for (k, v) in updates {
+            set_system_config(&state.db, k, &v)
+                .await
+                .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+        }
+    }
+
+    // 重载运行时配置（无需重启，立即生效）
+    let map = get_system_config_all(&state.db)
+        .await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    let cfg = RuntimeConfig::from_map(&map);
+    *state.config.write().map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "config lock poisoned".into()))? = cfg.clone();
+
+    Ok(Json(to_system_config(&cfg)))
 }
 
 // 增强的统计端点

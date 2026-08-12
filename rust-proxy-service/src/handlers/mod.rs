@@ -1,16 +1,17 @@
 use axum::{
-    extract::{Extension, State, Path},
+    extract::{Extension, FromRef, State, Path},
     http::{StatusCode, HeaderMap},
     response::{IntoResponse, Response},
     body::Body,
     Json,
 };
 use serde_json::json;
-use std::sync::Arc;
+use std::sync::{Arc, RwLock};
 use std::time::Instant;
 use urlencoding::decode;
 
 use crate::{
+    config::RuntimeConfig,
     models::{ChatRequest, User, Message},
     services::{RecallService, ProxyService},
     error::{ProxyError, Result},
@@ -26,16 +27,19 @@ pub struct AppState {
     pub db: DbPool,
     pub recall_service: Arc<RecallService>,
     pub proxy_service: Arc<ProxyService>,
+    /// 运行时配置（管理后台可动态修改，RwLock 保护）
+    pub config: Arc<RwLock<RuntimeConfig>>,
+    /// JWT 签名密钥（启动时从 JWT_SECRET 或随机生成）
+    pub jwt_secret: Vec<u8>,
 }
 
-const CONTEXT_THRESHOLD: usize = 1000000; // 1M tokens
-const RECALL_TARGET: usize = 400000; // 400K tokens
+// 允许 admin 子路由的 State<PgPool> 处理器从 AppState 提取 db
+impl FromRef<AppState> for DbPool {
+    fn from_ref(s: &AppState) -> DbPool {
+        s.db.clone()
+    }
+}
 
-/// 基于 token 预算动态计算召回条数 k：
-/// k ≈ RECALL_TARGET(400K) / 平均每条消息的 tokens，
-/// 使召回后的上下文尽量贴近 400K 目标（而非固定条数）。
-/// 例如 1M tokens / 5000 条消息 → 平均 200 tokens/条 → k = 400000/200 = 2000 条
-/// 例如 1M tokens / 200 条长消息 → 平均 5000 tokens/条 → k = 400000/5000 = 80 条
 /// 结构感知切分（LLMLingua budget-controller 思路）：
 /// - `system` 消息：全保留（指令/系统提示压缩率最低，保持语义完整）
 /// - `history`：中间历史，交给 recall 按 query 相关性挑选（压缩主体）
@@ -73,9 +77,10 @@ fn k_from_budget(budget_tokens: usize, history: &[Message]) -> usize {
 
 /// 统一压缩管线（LongLLMLingua 问题感知 + lost-in-the-middle 缓解）：
 /// 系统/指令全保留 + 头部/尾部锚点 + 中间历史按 query 相关性召回 + 最近上下文，
-/// 组装后整体 token 估算不超过 RECALL_TARGET(400K)。
+/// 组装后整体 token 估算不超过 cfg.recall_target。
 async fn compress_context(
     recall: &RecallService,
+    cfg: &RuntimeConfig,
     messages: &[Message],
 ) -> crate::Result<Vec<Message>> {
     let (system, history, tail, query) = split_context(messages);
@@ -87,9 +92,9 @@ async fn compress_context(
         return Ok(out);
     }
 
-    // 预算分配：400K 减去已保留部分（system + tail + query），剩余全给历史召回
+    // 预算分配：recall_target 减去已保留部分（system + tail + query），剩余全给历史召回
     let preserved_tokens = estimate_tokens(&system) + estimate_tokens(&tail) + estimate_tokens(&[query.clone()]);
-    let budget = RECALL_TARGET.saturating_sub(preserved_tokens).max(1);
+    let budget = cfg.recall_target.saturating_sub(preserved_tokens).max(1);
     let k = k_from_budget(budget, &history);
 
     tracing::info!(
@@ -125,14 +130,24 @@ pub async fn chat_completions_handler(
     // Count input tokens (simplified)
     let input_tokens = estimate_tokens(&request.messages);
 
-    // Check if recall is needed
-    let needs_recall = input_tokens > CONTEXT_THRESHOLD;
+    // 运行时配置（后台可调）
+    let cfg = state.config.read().map_err(|_| ProxyError::Internal("config lock poisoned".into()))?.clone();
+
+    // 超限保护：超过 max_context_length 直接拒绝
+    if input_tokens > cfg.max_context_length {
+        return Err(ProxyError::BadRequest(format!(
+            "Input exceeds max_context_length ({})", cfg.max_context_length
+        )));
+    }
+
+    // Check if recall is needed（阈值可配置）
+    let needs_recall = input_tokens > cfg.recall_threshold;
 
     if needs_recall {
         crate::metrics::RECALL_TRIGGERED.inc();
 
         // 统一压缩管线：结构感知 + 问题感知 + token 预算保证
-        request.messages = compress_context(&state.recall_service, &request.messages).await?;
+        request.messages = compress_context(&state.recall_service, &cfg, &request.messages).await?;
     }
 
     // Increment user quota
@@ -282,14 +297,22 @@ pub async fn dynamic_chat_completions_handler(
     // 3. Count input tokens
     let input_tokens = estimate_tokens(&request.messages);
 
-    // 4. Check if recall is needed (>400K tokens)
-    let needs_recall = input_tokens > CONTEXT_THRESHOLD;
+    // 3b. 运行时配置（后台可调）+ 超限保护
+    let cfg = state.config.read().map_err(|_| ProxyError::Internal("config lock poisoned".into()))?.clone();
+    if input_tokens > cfg.max_context_length {
+        return Err(ProxyError::BadRequest(format!(
+            "Input exceeds max_context_length ({})", cfg.max_context_length
+        )));
+    }
+
+    // 4. Check if recall is needed（阈值可配置）
+    let needs_recall = input_tokens > cfg.recall_threshold;
 
     if needs_recall {
         crate::metrics::RECALL_TRIGGERED.inc();
 
         let recall_start = Instant::now();
-        let compressed = compress_context(&state.recall_service, &request.messages).await?;
+        let compressed = compress_context(&state.recall_service, &cfg, &request.messages).await?;
         let recall_duration = recall_start.elapsed();
         crate::metrics::RECALL_LATENCY.observe(recall_duration.as_secs_f64());
 

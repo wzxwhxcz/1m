@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
 use chrono::{DateTime, Utc};
 use sqlx::Row;
+use std::collections::HashMap;
 
 // User model
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -86,6 +87,29 @@ pub struct Admin {
     pub username: String,
     pub password_hash: String,
     pub created_at: DateTime<Utc>,
+}
+
+/// 读取全部 system_config（key -> value）
+pub async fn get_system_config_all(pool: &crate::DbPool) -> crate::Result<HashMap<String, String>> {
+    let rows = sqlx::query("SELECT key, value FROM system_config")
+        .fetch_all(pool)
+        .await?;
+    Ok(rows.iter()
+        .map(|r| (r.get::<String, _>("key"), r.get::<String, _>("value")))
+        .collect())
+}
+
+/// 写入/更新单条 system_config（upsert）
+pub async fn set_system_config(pool: &crate::DbPool, key: &str, value: &str) -> crate::Result<()> {
+    sqlx::query(
+        "INSERT INTO system_config (key, value) VALUES ($1, $2)
+         ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = NOW()"
+    )
+    .bind(key)
+    .bind(value)
+    .execute(pool)
+    .await?;
+    Ok(())
 }
 
 // Admin API requests/responses

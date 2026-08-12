@@ -4,7 +4,7 @@ use axum::{
     middleware,
     extract::DefaultBodyLimit,
 };
-use std::sync::Arc;
+use std::sync::{Arc, RwLock};
 use tower_http::{
     cors::CorsLayer,
     trace::TraceLayer,
@@ -76,6 +76,15 @@ async fn main() -> anyhow::Result<()> {
     initialize_schema(&db_pool).await?;
     tracing::info!("Database schema initialized");
 
+    // 加载运行时配置（system_config 表，可后台修改）
+    use rust_proxy_service::models::get_system_config_all;
+    let config_map = get_system_config_all(&db_pool).await?;
+    let runtime_config = rust_proxy_service::config::RuntimeConfig::from_map(&config_map);
+    tracing::info!("Runtime config loaded: threshold={} target={}", runtime_config.recall_threshold, runtime_config.recall_target);
+
+    // JWT 密钥（JWT_SECRET 或进程随机）
+    let jwt_secret = rust_proxy_service::config::jwt_secret();
+
     // Create services
     let recall_service = Arc::new(RecallService::new(
         config.recall.urls.clone(),
@@ -91,6 +100,8 @@ async fn main() -> anyhow::Result<()> {
         db: db_pool.clone(),
         recall_service,
         proxy_service,
+        config: Arc::new(RwLock::new(runtime_config)),
+        jwt_secret,
     };
 
     // Build router
@@ -117,10 +128,10 @@ async fn main() -> anyhow::Result<()> {
         )
         .with_state(state.clone())
         
-        // Admin API - Login (public, uses PgPool state)
-        .route("/api/admin/login", post(login_handler).with_state(db_pool.clone()))
-        
-        // Admin API - Protected routes (with JWT, uses PgPool state)
+        // Admin API - Login (public)
+        .route("/api/admin/login", post(login_handler))
+
+        // Admin API - Protected routes (JWT, AppState state via FromRef)
         .nest("/api/admin", Router::new()
             .route("/users", get(list_users_handler).post(create_user_handler))
             .route("/users/:id", get(get_user_handler).put(update_user_handler).delete(delete_user_handler))
@@ -130,8 +141,8 @@ async fn main() -> anyhow::Result<()> {
             .route("/stats/trend", get(trend_data_handler))
             .route("/logs", get(list_logs_handler))
             .route("/config", get(get_system_config_handler).put(update_system_config_handler))
-            .layer(middleware::from_fn(jwt_auth_middleware))
-            .with_state(db_pool.clone())
+            .layer(middleware::from_fn_with_state(state.clone(), jwt_auth_middleware))
+            .with_state(state.clone())
         )
         
         // Middleware

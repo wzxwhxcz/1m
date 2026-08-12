@@ -72,6 +72,18 @@ pub async fn initialize_schema(pool: &DbPool) -> Result<()> {
     .await?;
 
     sqlx::query(
+        r#"
+        CREATE TABLE IF NOT EXISTS system_config (
+            key VARCHAR(128) PRIMARY KEY,
+            value TEXT NOT NULL,
+            updated_at TIMESTAMPTZ DEFAULT NOW()
+        )
+        "#
+    )
+    .execute(pool)
+    .await?;
+
+    sqlx::query(
         "CREATE INDEX IF NOT EXISTS idx_user_key ON users(service_key)"
     )
     .execute(pool)
