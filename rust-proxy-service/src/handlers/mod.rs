@@ -70,7 +70,7 @@ fn split_context(messages: &[Message]) -> (Vec<Message>, Vec<Message>, Vec<Messa
 /// 基于「历史消息」的实际 token 数和给定预算反推 k：
 /// k = budget / 历史平均每条 tokens，保证召回后 ≈ 预算
 fn k_from_budget(budget_tokens: usize, history: &[Message]) -> usize {
-    let hist_tokens: usize = history.iter().map(|m| m.content.len() / 4).sum();
+    let hist_tokens = estimate_tokens(history);
     let avg = (hist_tokens / history.len().max(1)).max(1);
     (budget_tokens / avg).clamp(1, history.len().max(1))
 }
@@ -107,7 +107,7 @@ async fn compress_context(
     );
 
     let recalled = recall
-        .recall_messages(&history, query.content.clone(), k, "car", 10)
+        .recall_messages(&history, query.content.clone(), k, "hybrid", 10)
         .await?;
 
     // 组装：系统/指令 + 召回中间历史 + 尾部最近上下文 + query
@@ -245,10 +245,21 @@ pub async fn metrics_handler() -> impl IntoResponse {
     )
 }
 
-// Simplified token estimation (1 token ≈ 4 characters)
+// 精确 token 估算（tiktoken o200k_base，与主流上游计费一致；
+// 中文/英文/代码混合内容比 len/4 更准，避免触发阈值和 k 预算偏差）
+fn tokenizer() -> &'static tiktoken_rs::CoreBPE {
+    use std::sync::OnceLock;
+    static TOKENIZER: OnceLock<tiktoken_rs::CoreBPE> = OnceLock::new();
+    TOKENIZER.get_or_init(|| {
+        tiktoken_rs::o200k_base().expect("failed to load o200k_base tokenizer")
+    })
+}
+
 fn estimate_tokens(messages: &[Message]) -> usize {
-    messages.iter()
-        .map(|m| m.content.len() / 4)
+    let enc = tokenizer();
+    messages
+        .iter()
+        .map(|m| enc.encode_with_special_tokens(&m.content).len())
         .sum()
 }
 

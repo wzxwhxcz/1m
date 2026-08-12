@@ -1,5 +1,6 @@
 use ndarray::{Array1, Array2};
 use serde::{Deserialize, Serialize};
+use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 use crate::embedding::EmbeddingService;
 use crate::error::{RecallError, Result};
@@ -29,6 +30,10 @@ pub enum RecallAlgorithm {
     Dense,
     #[serde(rename = "hybrid_dat")]
     HybridDat,
+    /// 纯 BM25 稀疏检索（无 embedding 依赖，标识符/术语/专名场景强）
+    Bm25,
+    /// 混合检索：BM25 + 稠密向量，RRF 融合（2026 RAG 生产标准）
+    Hybrid,
     Car,
 }
 
@@ -70,6 +75,12 @@ impl RecallService {
             }
             RecallAlgorithm::HybridDat => {
                 self.hybrid_dat_recall(&request.messages, &request.query, request.k).await?
+            }
+            RecallAlgorithm::Bm25 => {
+                self.bm25_recall(&request.messages, &request.query, request.k)
+            }
+            RecallAlgorithm::Hybrid => {
+                self.hybrid_recall(&request.messages, &request.query, request.k).await?
             }
             RecallAlgorithm::Car => {
                 self.car_recall(&request.messages, &request.query, request.k).await?
@@ -127,6 +138,52 @@ impl RecallService {
             .collect();
         
         let indices = self.top_k_indices(&hybrid_scores, k);
+        Ok(indices.into_iter().map(|i| messages[i].clone()).collect())
+    }
+
+    /// BM25 召回：纯词法稀疏检索（无 embedding 依赖）
+    /// 对标识符、专名、术语等精确匹配场景强于稠密检索（2026 基准：BM25 在金融文档上全面胜出稠密）。
+    fn bm25_recall(&self, messages: &[Message], query: &str, k: usize) -> Vec<Message> {
+        let scores = bm25_scores(messages, query);
+        let indices = self.top_k_indices(&scores, k);
+        indices.into_iter().map(|i| messages[i].clone()).collect()
+    }
+
+    /// 混合检索：BM25(稀疏) + 稠密向量，RRF 融合（2026 RAG 生产标准）。
+    /// embedding API 不可用时自动退化为纯 BM25，保证可用性。
+    async fn hybrid_recall(&self, messages: &[Message], query: &str, k: usize) -> Result<Vec<Message>> {
+        // 1) 稀疏通道：BM25（纯词法，永不失败）
+        let sparse_scores = bm25_scores(messages, query);
+        let sparse_rank = rank_indices(&sparse_scores);
+
+        // 2) 稠密通道：语义相似度（失败则跳过，退化纯 BM25）
+        let dense_rank: Option<Vec<usize>> = {
+            let texts: Vec<String> = messages.iter().map(|m| m.content.clone()).collect();
+            match self.embedding.embed_batch(texts).await {
+                Ok(embs) => match self.embedding.embed(query).await {
+                    Ok(q_vec) => {
+                        let similarities = self.compute_similarities(&embs, &q_vec);
+                        Some(rank_indices(&similarities))
+                    }
+                    Err(_) => None,
+                },
+                Err(_) => None,
+            }
+        };
+
+        // 3) RRF 融合：score(i) = Σ 1/(60 + rank(i))
+        let n = messages.len();
+        let mut rrf_scores = vec![0.0f32; n];
+        for (rank, idx) in sparse_rank.iter().enumerate() {
+            rrf_scores[*idx] += 1.0 / (60.0 + rank as f32 + 1.0);
+        }
+        if let Some(dense_rank) = &dense_rank {
+            for (rank, idx) in dense_rank.iter().enumerate() {
+                rrf_scores[*idx] += 1.0 / (60.0 + rank as f32 + 1.0);
+            }
+        }
+
+        let indices = self.top_k_indices(&rrf_scores, k);
         Ok(indices.into_iter().map(|i| messages[i].clone()).collect())
     }
 
@@ -298,4 +355,122 @@ impl RecallService {
             .sum::<f32>()
             .sqrt()
     }
+}
+
+// ==================== BM25 稀疏检索（CJK 兼容分词） ====================
+
+/// 分词：ASCII 词按整词（小写），CJK 连续段按字符 bigram。
+/// bigram 对中文检索有效（无需分词器），可捕获「三体」「罗辑」等专名片段。
+fn tokenize(text: &str) -> Vec<String> {
+    let mut tokens: Vec<String> = Vec::new();
+    let mut ascii_buf = String::new();
+    let mut cjk_buf: Vec<char> = Vec::new();
+
+    for c in text.chars() {
+        if c.is_ascii_alphanumeric() {
+            if !cjk_buf.is_empty() {
+                push_cjk_bigrams(&cjk_buf, &mut tokens);
+                cjk_buf.clear();
+            }
+            ascii_buf.push(c.to_ascii_lowercase());
+        } else if c.is_alphanumeric() {
+            // CJK 及其它 Unicode 字母
+            if !ascii_buf.is_empty() {
+                tokens.push(std::mem::take(&mut ascii_buf));
+            }
+            cjk_buf.push(c);
+        } else {
+            if !ascii_buf.is_empty() {
+                tokens.push(std::mem::take(&mut ascii_buf));
+            }
+            if !cjk_buf.is_empty() {
+                push_cjk_bigrams(&cjk_buf, &mut tokens);
+                cjk_buf.clear();
+            }
+        }
+    }
+    if !ascii_buf.is_empty() {
+        tokens.push(ascii_buf);
+    }
+    if !cjk_buf.is_empty() {
+        push_cjk_bigrams(&cjk_buf, &mut tokens);
+    }
+    tokens
+}
+
+fn push_cjk_bigrams(chars: &[char], out: &mut Vec<String>) {
+    if chars.len() == 1 {
+        out.push(chars[0].to_string());
+        return;
+    }
+    for w in chars.windows(2) {
+        out.push(format!("{}{}", w[0], w[1]));
+    }
+}
+
+/// 标准 BM25：k1=1.5, b=0.75，IDF 用平滑 ln 版本
+fn bm25_scores(messages: &[Message], query: &str) -> Vec<f32> {
+    let n = messages.len();
+    if n == 0 {
+        return Vec::new();
+    }
+
+    // 文档词频
+    let docs: Vec<Vec<String>> = messages
+        .iter()
+        .map(|m| tokenize(&m.content))
+        .collect();
+    let avgdl: f32 = docs.iter().map(|d| d.len() as f32).sum::<f32>() / n as f32;
+
+    // 文档频率 df(t)：出现该词的文档数
+    let mut df: HashMap<String, usize> = HashMap::new();
+    for doc in &docs {
+        let mut seen = HashSet::new();
+        for t in doc {
+            if seen.insert(t.clone()) {
+                *df.entry(t.clone()).or_insert(0) += 1;
+            }
+        }
+    }
+
+    // 每条文档的 term 计数
+    let mut tf: Vec<HashMap<String, usize>> = Vec::with_capacity(n);
+    for doc in &docs {
+        let mut m = HashMap::new();
+        for t in doc {
+            *m.entry(t.clone()).or_insert(0) += 1;
+        }
+        tf.push(m);
+    }
+
+    let query_tokens = tokenize(query);
+    let k1 = 1.5f32;
+    let b = 0.75f32;
+
+    let mut scores = vec![0.0f32; n];
+    for q in &query_tokens {
+        let df_q = *df.get(q).unwrap_or(&0) as f32;
+        let idf = ((n as f32 - df_q + 0.5) / (df_q + 0.5) + 1.0).ln();
+        if idf <= 0.0 {
+            continue;
+        }
+        for (i, tfi) in tf.iter().enumerate() {
+            let f = *tfi.get(q).unwrap_or(&0) as f32;
+            if f > 0.0 {
+                let dl = docs[i].len() as f32;
+                let denom = f + k1 * (1.0 - b + b * dl / avgdl.max(1.0));
+                scores[i] += idf * (f * (k1 + 1.0)) / denom;
+            }
+        }
+    }
+    scores
+}
+
+/// 按分数降序返回排名（rank 从 0 开始，分数相同按原顺序，保证稳定性）
+fn rank_indices(scores: &[f32]) -> Vec<usize> {
+    let mut idx: Vec<usize> = (0..scores.len()).collect();
+    idx.sort_by(|&a, &b| {
+        scores[b].partial_cmp(&scores[a]).unwrap_or(std::cmp::Ordering::Equal)
+    });
+    idx
 }
