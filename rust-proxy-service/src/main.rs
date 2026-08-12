@@ -129,7 +129,7 @@ async fn main() -> anyhow::Result<()> {
         .with_state(state.clone())
         
         // Admin API - Login (public)
-        .route("/api/admin/login", post(login_handler))
+        .route("/api/admin/login", post(login_handler).with_state(state.clone()))
 
         // Admin API - Protected routes (JWT, AppState state via FromRef)
         .nest("/api/admin", Router::new()
