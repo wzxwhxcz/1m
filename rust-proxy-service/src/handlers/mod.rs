@@ -245,8 +245,12 @@ pub async fn metrics_handler() -> impl IntoResponse {
     )
 }
 
-// 精确 token 估算（tiktoken o200k_base，与主流上游计费一致；
-// 中文/英文/代码混合内容比 len/4 更准，避免触发阈值和 k 预算偏差）
+// 精确 token 估算（tiktoken o200k_base，与主流上游计费一致）。
+// 性能保护：对超长消息（>SAMPLE_LIMIT 字符）只编码前 2000 字符采样，
+// 按比例外推——全量编码超长文本会退化为分钟级（实测 12M 字符需 6 分钟）。
+const TOKEN_SAMPLE_CHARS: usize = 2000;
+const TOKEN_SAMPLE_LIMIT: usize = 4096;
+
 fn tokenizer() -> &'static tiktoken_rs::CoreBPE {
     use std::sync::OnceLock;
     static TOKENIZER: OnceLock<tiktoken_rs::CoreBPE> = OnceLock::new();
@@ -255,11 +259,23 @@ fn tokenizer() -> &'static tiktoken_rs::CoreBPE {
     })
 }
 
+fn estimate_message_tokens(enc: &tiktoken_rs::CoreBPE, text: &str) -> usize {
+    if text.len() <= TOKEN_SAMPLE_LIMIT {
+        return enc.encode_with_special_tokens(text).len();
+    }
+    // 采样前 TOKEN_SAMPLE_CHARS 个字符，按字符数比例外推
+    let sample: String = text.chars().take(TOKEN_SAMPLE_CHARS).collect();
+    let sample_tokens = enc.encode_with_special_tokens(&sample).len();
+    let total_chars = text.chars().count().max(1);
+    let extrapolated = sample_tokens.saturating_mul(total_chars) / TOKEN_SAMPLE_CHARS;
+    extrapolated.max(sample_tokens)
+}
+
 fn estimate_tokens(messages: &[Message]) -> usize {
     let enc = tokenizer();
     messages
         .iter()
-        .map(|m| enc.encode_with_special_tokens(&m.content).len())
+        .map(|m| estimate_message_tokens(&enc, &m.content))
         .sum()
 }
 
