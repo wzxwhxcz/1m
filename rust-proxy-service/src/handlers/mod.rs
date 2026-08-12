@@ -36,9 +36,81 @@ const RECALL_TARGET: usize = 400000; // 400K tokens
 /// 使召回后的上下文尽量贴近 400K 目标（而非固定条数）。
 /// 例如 1M tokens / 5000 条消息 → 平均 200 tokens/条 → k = 400000/200 = 2000 条
 /// 例如 1M tokens / 200 条长消息 → 平均 5000 tokens/条 → k = 400000/5000 = 80 条
-fn compute_dynamic_k(input_tokens: usize, message_count: usize) -> usize {
-    let avg_tokens_per_msg = (input_tokens / message_count.max(1)).max(1);
-    (RECALL_TARGET / avg_tokens_per_msg).clamp(1, message_count.max(1))
+/// 结构感知切分（LLMLingua budget-controller 思路）：
+/// - `system` 消息：全保留（指令/系统提示压缩率最低，保持语义完整）
+/// - `history`：中间历史，交给 recall 按 query 相关性挑选（压缩主体）
+/// - `tail`：query 前最后 2 条，作为最近上下文锚点全保留（StreamingLLM/注意力汇 思路）
+/// - `query`：最后一条用户消息全保留（question 几乎不压缩）
+fn split_context(messages: &[Message]) -> (Vec<Message>, Vec<Message>, Vec<Message>, Message) {
+    let n = messages.len();
+    let query_idx = n.saturating_sub(1);
+    let tail_start = n.saturating_sub(3).min(query_idx);
+
+    let mut system = Vec::new();
+    let mut history = Vec::new();
+    let mut tail = Vec::new();
+    for (i, m) in messages.iter().enumerate() {
+        if m.role == "system" {
+            system.push(m.clone());
+        } else if i < query_idx && i >= tail_start {
+            tail.push(m.clone());
+        } else if i < query_idx {
+            history.push(m.clone());
+        }
+    }
+
+    let query = messages[query_idx].clone();
+    (system, history, tail, query)
+}
+
+/// 基于「历史消息」的实际 token 数和给定预算反推 k：
+/// k = budget / 历史平均每条 tokens，保证召回后 ≈ 预算
+fn k_from_budget(budget_tokens: usize, history: &[Message]) -> usize {
+    let hist_tokens: usize = history.iter().map(|m| m.content.len() / 4).sum();
+    let avg = (hist_tokens / history.len().max(1)).max(1);
+    (budget_tokens / avg).clamp(1, history.len().max(1))
+}
+
+/// 统一压缩管线（LongLLMLingua 问题感知 + lost-in-the-middle 缓解）：
+/// 系统/指令全保留 + 头部/尾部锚点 + 中间历史按 query 相关性召回 + 最近上下文，
+/// 组装后整体 token 估算不超过 RECALL_TARGET(400K)。
+async fn compress_context(
+    recall: &RecallService,
+    messages: &[Message],
+) -> crate::Result<Vec<Message>> {
+    let (system, history, tail, query) = split_context(messages);
+
+    if history.is_empty() {
+        let mut out = system;
+        out.extend(tail);
+        out.push(query);
+        return Ok(out);
+    }
+
+    // 预算分配：400K 减去已保留部分（system + tail + query），剩余全给历史召回
+    let preserved_tokens = estimate_tokens(&system) + estimate_tokens(&tail) + estimate_tokens(&[query.clone()]);
+    let budget = RECALL_TARGET.saturating_sub(preserved_tokens).max(1);
+    let k = k_from_budget(budget, &history);
+
+    tracing::info!(
+        system_msgs = system.len(),
+        history_msgs = history.len(),
+        tail_msgs = tail.len(),
+        budget_tokens = budget,
+        recall_k = k,
+        "Context compression plan"
+    );
+
+    let recalled = recall
+        .recall_messages(&history, query.content.clone(), k, "car", 10)
+        .await?;
+
+    // 组装：系统/指令 + 召回中间历史 + 尾部最近上下文 + query
+    let mut out = system;
+    out.extend(recalled);
+    out.extend(tail);
+    out.push(query);
+    Ok(out)
 }
 
 pub async fn chat_completions_handler(
@@ -58,23 +130,9 @@ pub async fn chat_completions_handler(
 
     if needs_recall {
         crate::metrics::RECALL_TRIGGERED.inc();
-        
-        // Extract query from last message
-        let query = request.messages
-            .last()
-            .map(|m| m.content.clone())
-            .unwrap_or_default();
 
-        // Calculate k based on token budget (dynamic)
-        let k = compute_dynamic_k(input_tokens, request.messages.len());
-
-        // Call recall service
-        let recall_response = state.recall_service
-            .recall(request.messages.clone(), query, k)
-            .await?;
-
-        // Replace messages with recalled messages
-        request.messages = recall_response.recalled_messages;
+        // 统一压缩管线：结构感知 + 问题感知 + token 预算保证
+        request.messages = compress_context(&state.recall_service, &request.messages).await?;
     }
 
     // Increment user quota
@@ -229,31 +287,21 @@ pub async fn dynamic_chat_completions_handler(
 
     if needs_recall {
         crate::metrics::RECALL_TRIGGERED.inc();
-        
-        // Extract query from last message
-        let query = request.messages.last()
-            .map(|m| m.content.as_str())
-            .unwrap_or("");
 
-        // Call recall service with dynamic k (token-budget aware)
         let recall_start = Instant::now();
-        let k = compute_dynamic_k(input_tokens, request.messages.len());
-        let recalled_messages = state.recall_service
-            .recall_messages(&request.messages, query.to_string(), k, "car", 10)
-            .await?;
-        
+        let compressed = compress_context(&state.recall_service, &request.messages).await?;
         let recall_duration = recall_start.elapsed();
         crate::metrics::RECALL_LATENCY.observe(recall_duration.as_secs_f64());
 
         tracing::info!(
             original_count = request.messages.len(),
-            recalled_count = recalled_messages.len(),
+            compressed_count = compressed.len(),
+            compressed_tokens = estimate_tokens(&compressed),
             duration_ms = recall_duration.as_millis(),
-            "Context recall completed"
+            "Context compression completed"
         );
 
-        // Replace messages with recalled ones
-        request.messages = recalled_messages;
+        request.messages = compressed;
     }
 
     // 5. Forward to upstream
