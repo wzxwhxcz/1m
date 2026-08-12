@@ -379,6 +379,11 @@ fn tokenize(text: &str) -> Vec<String> {
                 tokens.push(std::mem::take(&mut ascii_buf));
             }
             cjk_buf.push(c);
+        } else if c.is_whitespace() {
+            // 空白不打断 CJK run（修复 "redis 连接池" 空格导致 bigram 断裂）
+            if !ascii_buf.is_empty() {
+                tokens.push(std::mem::take(&mut ascii_buf));
+            }
         } else {
             if !ascii_buf.is_empty() {
                 tokens.push(std::mem::take(&mut ascii_buf));
