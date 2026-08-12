@@ -92,8 +92,9 @@ async fn main() -> anyhow::Result<()> {
     ));
     tracing::info!("Recall service created with {} instances", config.recall.urls.len());
 
-    let proxy_service = Arc::new(ProxyService::new(60));
-    tracing::info!("Proxy service created");
+    // 上游请求超时（管理后台 upstream_timeout_secs 可调，默认 300s）
+    let proxy_service = Arc::new(ProxyService::new(runtime_config.upstream_timeout_secs));
+    tracing::info!("Proxy service created (timeout {}s)", runtime_config.upstream_timeout_secs);
 
     // Create application state
     let state = AppState {

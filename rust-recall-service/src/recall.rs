@@ -172,10 +172,15 @@ impl RecallService {
         };
 
         // 3) RRF 融合：score(i) = Σ 1/(60 + rank(i))
+        // 稀疏通道退化（query 词在语料中完全缺失，所有 BM25 得分为 0）时跳过，
+        // 避免全 0 平分按任意顺序稀释稠密语义排序。
         let n = messages.len();
         let mut rrf_scores = vec![0.0f32; n];
-        for (rank, idx) in sparse_rank.iter().enumerate() {
-            rrf_scores[*idx] += 1.0 / (60.0 + rank as f32 + 1.0);
+        let bm25_max = sparse_scores.iter().copied().fold(0.0f32, f32::max);
+        if bm25_max > 0.0 {
+            for (rank, idx) in sparse_rank.iter().enumerate() {
+                rrf_scores[*idx] += 1.0 / (60.0 + rank as f32 + 1.0);
+            }
         }
         if let Some(dense_rank) = &dense_rank {
             for (rank, idx) in dense_rank.iter().enumerate() {
