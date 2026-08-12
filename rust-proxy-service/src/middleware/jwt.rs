@@ -17,7 +17,7 @@ pub struct Claims {
 
 pub async fn jwt_auth_middleware(
     State(state): State<AppState>,
-    req: Request,
+    mut req: Request,
     next: Next,
 ) -> Result<Response, (StatusCode, String)> {
     let auth_header = req
