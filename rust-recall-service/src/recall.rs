@@ -590,10 +590,56 @@ fn knee_k(sims: &[f32], max_k: usize, floor: f32) -> usize {
     }
     let span_gap = (vals[0] - vals[cap - 1]) / (cap as f32 - 1.0).max(1.0);
     if best_gap < (span_gap * 1.8).max(0.015) {
-        cap
+        two_means_k(&vals, cap)
     } else {
         best_i
     }
+}
+
+/// 1D 二均值：把高于 floor 的分数分成高/低两簇，只留更靠近高簇中心的前缀。
+fn two_means_k(vals_desc: &[f32], cap: usize) -> usize {
+    if cap == 0 {
+        return 0;
+    }
+    let vals = &vals_desc[..cap];
+    if cap < 8 {
+        return cap;
+    }
+    let mut c_high = vals[0];
+    let mut c_low = vals[cap - 1];
+    for _ in 0..8 {
+        let mut sum_h = 0.0;
+        let mut n_h = 0.0;
+        let mut sum_l = 0.0;
+        let mut n_l = 0.0;
+        for &v in vals {
+            if (v - c_high).abs() <= (v - c_low).abs() {
+                sum_h += v;
+                n_h += 1.0;
+            } else {
+                sum_l += v;
+                n_l += 1.0;
+            }
+        }
+        if n_h > 0.0 {
+            c_high = sum_h / n_h;
+        }
+        if n_l > 0.0 {
+            c_low = sum_l / n_l;
+        }
+    }
+    if (c_high - c_low).abs() < 0.02 {
+        return cap;
+    }
+    let mut keep = 0usize;
+    for &v in vals {
+        if (v - c_high).abs() <= (v - c_low).abs() {
+            keep += 1;
+        } else {
+            break;
+        }
+    }
+    keep.max(1).min(cap)
 }
 
 fn cosine_similarity(a: &[f32], b: &[f32]) -> f32 {
@@ -753,6 +799,14 @@ mod tests {
         sims.extend_from_slice(&[0.28, 0.27, 0.26, 0.25, 0.24]);
         let k = knee_k(&sims, 20, 0.20);
         assert!(k >= 8 && k <= 9, "knee={k} sims_above_cliff should be 8");
+    }
+
+    #[test]
+    fn two_means_splits_bimodal_scores() {
+        let mut vals: Vec<f32> = (0..40).map(|i| 0.70 - i as f32 * 0.003).collect();
+        vals.extend((0..40).map(|i| 0.38 - i as f32 * 0.002));
+        let k = two_means_k(&vals, 80);
+        assert!(k >= 35 && k <= 45, "two-means k={k}");
     }
 
     #[test]
