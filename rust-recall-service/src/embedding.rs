@@ -56,15 +56,24 @@ pub fn embeddings_url(api_base: &str) -> String {
     }
 }
 
-/// 按 Unicode 字符截断，避免超长章节把 embedding 请求拖到分钟级。
-pub fn truncate_chars(text: &str, max_chars: usize) -> &str {
+/// 按 Unicode 字符截断。超长文本取文首 75% + 文尾 25%（章末点题），避免只看开头。
+pub fn truncate_chars(text: &str, max_chars: usize) -> String {
     if max_chars == 0 {
-        return text;
+        return text.to_string();
     }
-    match text.char_indices().nth(max_chars) {
-        Some((idx, _)) => &text[..idx],
-        None => text,
+    let total = text.chars().count();
+    if total <= max_chars {
+        return text.to_string();
     }
+    // 很短的预算退化为纯前缀，保证单测和短查询行为稳定
+    if max_chars < 32 {
+        return text.chars().take(max_chars).collect();
+    }
+    let tail_n = (max_chars / 4).max(1);
+    let head_n = max_chars.saturating_sub(tail_n + 1);
+    let head: String = text.chars().take(head_n).collect();
+    let tail: String = text.chars().skip(total.saturating_sub(tail_n)).collect();
+    format!("{head}…{tail}")
 }
 
 impl RemoteEmbeddingClient {
@@ -121,7 +130,7 @@ impl RemoteEmbeddingClient {
         text.hash(&mut hasher);
         let hash = hasher.finish();
 
-        format!("emb:v2:{}:{}:{:x}", self.model, self.max_chars, hash)
+        format!("emb:v3:{}:{}:{:x}", self.model, self.max_chars, hash)
     }
 
     async fn call_api_once(&self, texts: &[String]) -> Result<Vec<Vec<f32>>> {
@@ -176,13 +185,13 @@ impl RemoteEmbeddingClient {
 impl EmbeddingService for RemoteEmbeddingClient {
     async fn embed(&self, text: &str) -> Result<Vec<f32>> {
         let text = truncate_chars(text, self.max_chars);
-        let cache_key = self.cache_key(text);
+        let cache_key = self.cache_key(&text);
 
         if let Some(cached) = self.cache.get_embedding(&cache_key).await? {
             return Ok(cached);
         }
 
-        let embeddings = self.call_api(vec![text.to_string()]).await?;
+        let embeddings = self.call_api(vec![text]).await?;
 
         if embeddings.is_empty() {
             return Err(RecallError::Embedding("Empty response".to_string()));
@@ -196,7 +205,7 @@ impl EmbeddingService for RemoteEmbeddingClient {
     async fn embed_batch(&self, texts: Vec<String>) -> Result<Vec<Vec<f32>>> {
         let texts: Vec<String> = texts
             .iter()
-            .map(|t| truncate_chars(t, self.max_chars).to_string())
+            .map(|t| truncate_chars(t, self.max_chars))
             .collect();
         let cache_keys: Vec<String> = texts.iter().map(|t| self.cache_key(t)).collect();
 
@@ -284,5 +293,16 @@ mod tests {
         let s = "三体罗辑黑暗森林";
         assert_eq!(truncate_chars(s, 2), "三体");
         assert_eq!(truncate_chars(s, 100), s);
+    }
+
+    #[test]
+    fn truncate_chars_keeps_head_and_tail_on_long_text() {
+        let s: String = (0..100).map(|i| char::from_u32(0x4e00 + i).unwrap()).collect();
+        let out = truncate_chars(&s, 40);
+        let chars: Vec<char> = out.chars().collect();
+        assert!(chars.contains(&'…'), "{out}");
+        assert_eq!(chars[0], s.chars().next().unwrap());
+        assert_eq!(chars[chars.len() - 1], s.chars().last().unwrap());
+        assert!(chars.len() <= 40, "{}", chars.len());
     }
 }

@@ -141,7 +141,9 @@ impl RecallService {
     /// 对标识符、专名、术语等精确匹配场景强于稠密检索（2026 基准：BM25 在金融文档上全面胜出稠密）。
     fn bm25_recall(&self, messages: &[Message], query: &str, k: usize) -> Vec<Message> {
         let scores = bm25_scores(messages, query);
-        self.take_in_original_order(messages, &scores, k)
+        let mut indices = cutoff_indices(&scores, None, &scores, k, 0.36);
+        indices.sort_unstable();
+        indices.into_iter().map(|i| messages[i].clone()).collect()
     }
 
     /// 混合检索：BM25(稀疏) + 稠密向量，RRF 融合（2026 RAG 生产标准）。
@@ -152,19 +154,17 @@ impl RecallService {
         let sparse_rank = rank_indices(&sparse_scores);
 
         // 2) 稠密通道：语义相似度（失败则跳过，退化纯 BM25）
-        let dense_rank: Option<Vec<usize>> = {
+        let dense_sims: Option<Vec<f32>> = {
             let texts: Vec<String> = messages.iter().map(|m| m.content.clone()).collect();
             match self.embedding.embed_batch(texts).await {
                 Ok(embs) => match self.embedding.embed(query).await {
-                    Ok(q_vec) => {
-                        let similarities = self.compute_similarities(&embs, &q_vec);
-                        Some(rank_indices(&similarities))
-                    }
+                    Ok(q_vec) => Some(self.compute_similarities(&embs, &q_vec)),
                     Err(_) => None,
                 },
                 Err(_) => None,
             }
         };
+        let dense_rank = dense_sims.as_ref().map(|s| rank_indices(s));
 
         // 3) RRF 融合：score(i) = Σ 1/(60 + rank(i))
         // 稀疏通道退化（query 词在语料中完全缺失，所有 BM25 得分为 0）时跳过，
@@ -183,7 +183,23 @@ impl RecallService {
             }
         }
 
-        Ok(self.take_in_original_order(messages, &rrf_scores, k))
+        let floor: f32 = std::env::var("RECALL_COSINE_FLOOR")
+            .ok()
+            .and_then(|s| s.parse().ok())
+            .unwrap_or(0.36);
+        let mut indices = cutoff_indices(&rrf_scores, dense_sims.as_deref(), &sparse_scores, k, floor);
+        if let Some(sims) = dense_sims.as_ref() {
+            let peak = sims.iter().copied().fold(0.0f32, f32::max);
+            tracing::info!(
+                kept = indices.len(),
+                max_k = k,
+                peak_cosine = peak,
+                cosine_floor = floor,
+                "Adaptive recall cutoff (k is a cap, not a quota)"
+            );
+        }
+        indices.sort_unstable();
+        Ok(indices.into_iter().map(|i| messages[i].clone()).collect())
     }
 
     /// CAR 召回：聚类感知召回
@@ -477,6 +493,45 @@ fn bm25_scores(messages: &[Message], query: &str) -> Vec<f32> {
     scores
 }
 
+/// k 是上限不是配额。
+/// - 有稠密余弦时：低于 floor 的文档不召回（实测 Qwen3-4B：本系列章 ~0.46，跨书 ~0.31）
+/// - 无稠密时：BM25 为 0 的文档不填充
+fn cutoff_indices(
+    rank_scores: &[f32],
+    dense_sims: Option<&[f32]>,
+    sparse_scores: &[f32],
+    k: usize,
+    abs_floor: f32,
+) -> Vec<usize> {
+    let n = rank_scores.len();
+    if n == 0 || k == 0 {
+        return Vec::new();
+    }
+    let mut idx: Vec<usize> = (0..n).collect();
+    idx.sort_by(|&a, &b| {
+        rank_scores[b]
+            .partial_cmp(&rank_scores[a])
+            .unwrap_or(std::cmp::Ordering::Equal)
+    });
+
+    if let Some(sims) = dense_sims {
+        let peak = sims.iter().copied().fold(0.0f32, f32::max);
+        if peak <= 0.0 {
+            return Vec::new();
+        }
+        let floor = abs_floor.min(peak * 0.85);
+        idx.into_iter()
+            .filter(|&i| sims.get(i).copied().unwrap_or(0.0) >= floor)
+            .take(k)
+            .collect()
+    } else {
+        idx.into_iter()
+            .filter(|&i| sparse_scores.get(i).copied().unwrap_or(0.0) > 0.0)
+            .take(k)
+            .collect()
+    }
+}
+
 /// 按分数降序返回排名（rank 从 0 开始，分数相同按原顺序，保证稳定性）
 fn rank_indices(scores: &[f32]) -> Vec<usize> {
     let mut idx: Vec<usize> = (0..scores.len()).collect();
@@ -507,6 +562,36 @@ mod tests {
         ];
         let scores = bm25_scores(&msgs, "三体");
         assert!(scores.iter().all(|&s| s == 0.0), "{:?}", scores);
+    }
+
+    #[test]
+    fn cutoff_drops_low_cosine_padding() {
+        let rrf = vec![0.9, 0.8, 0.7, 0.6];
+        let dense = vec![0.46, 0.44, 0.31, 0.29]; // 两本相关，两本跨书
+        let sparse = vec![0.0, 0.0, 0.0, 0.0];
+        let kept = cutoff_indices(&rrf, Some(&dense), &sparse, 10, 0.36);
+        let mut kept = kept;
+        kept.sort();
+        assert_eq!(kept, vec![0, 1], "{kept:?}");
+    }
+
+    #[test]
+    fn cutoff_bm25_skips_zero_fill() {
+        let sparse = vec![2.1, 0.0, 1.3, 0.0];
+        let kept = cutoff_indices(&sparse, None, &sparse, 10, 0.36);
+        let mut kept = kept;
+        kept.sort();
+        assert_eq!(kept, vec![0, 2]);
+    }
+
+    #[test]
+    fn cutoff_lowers_floor_when_peak_is_weak() {
+        let rrf = vec![0.5, 0.4];
+        let dense = vec![0.32, 0.30];
+        let sparse = vec![0.0, 0.0];
+        // peak*0.85=0.272 < abs 0.36 → floor=0.272，两条都过
+        let kept = cutoff_indices(&rrf, Some(&dense), &sparse, 10, 0.36);
+        assert_eq!(kept.len(), 2);
     }
 }
 
