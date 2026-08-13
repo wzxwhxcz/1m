@@ -141,9 +141,36 @@ impl RecallService {
     /// 对标识符、专名、术语等精确匹配场景强于稠密检索（2026 基准：BM25 在金融文档上全面胜出稠密）。
     fn bm25_recall(&self, messages: &[Message], query: &str, k: usize) -> Vec<Message> {
         let scores = bm25_scores(messages, query);
-        let mut indices = cutoff_indices(&scores, None, &scores, k, 0.36);
+        let mut indices = cutoff_indices(&scores, None, &scores, k, 0.28);
         indices.sort_unstable();
         indices.into_iter().map(|i| messages[i].clone()).collect()
+    }
+
+    /// 长文档：文首/文尾分段 embed，取 max 余弦；再做伪相关反馈拉开簇间距。
+    async fn dense_scores(&self, messages: &[Message], query: &str) -> Result<Vec<f32>> {
+        const PASSAGE_CHARS: usize = 512;
+        let mut texts = Vec::new();
+        let mut owner = Vec::new();
+        for (i, m) in messages.iter().enumerate() {
+            for p in split_passages(&m.content, PASSAGE_CHARS) {
+                texts.push(p);
+                owner.push(i);
+            }
+        }
+        let embs = self.embedding.embed_batch(texts).await?;
+        if embs.len() != owner.len() {
+            return Err(RecallError::Embedding(format!(
+                "passage embedding count mismatch: {} vs {}",
+                embs.len(),
+                owner.len()
+            )));
+        }
+        let q = self.embedding.embed(query).await?;
+        let n = messages.len();
+        let (sims1, best_emb) = maxsim_docs(n, &owner, &embs, &q);
+        let q2 = prf_expand(&q, &best_emb, &sims1, 8, 0.6);
+        let (sims2, _) = maxsim_docs(n, &owner, &embs, &q2);
+        Ok(sims2)
     }
 
     /// 混合检索：BM25(稀疏) + 稠密向量，RRF 融合（2026 RAG 生产标准）。
@@ -153,15 +180,12 @@ impl RecallService {
         let sparse_scores = bm25_scores(messages, query);
         let sparse_rank = rank_indices(&sparse_scores);
 
-        // 2) 稠密通道：语义相似度（失败则跳过，退化纯 BM25）
-        let dense_sims: Option<Vec<f32>> = {
-            let texts: Vec<String> = messages.iter().map(|m| m.content.clone()).collect();
-            match self.embedding.embed_batch(texts).await {
-                Ok(embs) => match self.embedding.embed(query).await {
-                    Ok(q_vec) => Some(self.compute_similarities(&embs, &q_vec)),
-                    Err(_) => None,
-                },
-                Err(_) => None,
+        // 2) 稠密通道：分段 maxsim + 伪相关反馈（失败则跳过，退化纯 BM25）
+        let dense_sims: Option<Vec<f32>> = match self.dense_scores(messages, query).await {
+            Ok(s) => Some(s),
+            Err(e) => {
+                tracing::warn!(error = %e, "dense channel failed, BM25-only");
+                None
             }
         };
         let dense_rank = dense_sims.as_ref().map(|s| rank_indices(s));
@@ -186,15 +210,17 @@ impl RecallService {
         let floor: f32 = std::env::var("RECALL_COSINE_FLOOR")
             .ok()
             .and_then(|s| s.parse().ok())
-            .unwrap_or(0.36);
+            .unwrap_or(0.28);
         let mut indices = cutoff_indices(&rrf_scores, dense_sims.as_deref(), &sparse_scores, k, floor);
         if let Some(sims) = dense_sims.as_ref() {
             let peak = sims.iter().copied().fold(0.0f32, f32::max);
+            let effective = effective_floor(peak, floor);
             tracing::info!(
                 kept = indices.len(),
                 max_k = k,
                 peak_cosine = peak,
-                cosine_floor = floor,
+                cosine_floor = effective,
+                knee = knee_k(sims, k, effective),
                 "Adaptive recall cutoff (k is a cap, not a quota)"
             );
         }
@@ -271,15 +297,7 @@ impl RecallService {
     }
 
     fn cosine_similarity(&self, a: &[f32], b: &[f32]) -> f32 {
-        let dot: f32 = a.iter().zip(b.iter()).map(|(x, y)| x * y).sum();
-        let norm_a: f32 = a.iter().map(|x| x * x).sum::<f32>().sqrt();
-        let norm_b: f32 = b.iter().map(|x| x * x).sum::<f32>().sqrt();
-        
-        if norm_a == 0.0 || norm_b == 0.0 {
-            0.0
-        } else {
-            dot / (norm_a * norm_b)
-        }
+        cosine_similarity(a, b)
     }
 
     /// 按分数取 top-k，再恢复原始顺序（对话历史连贯性 > 分数序）
@@ -494,8 +512,8 @@ fn bm25_scores(messages: &[Message], query: &str) -> Vec<f32> {
 }
 
 /// k 是上限不是配额。
-/// - 有稠密余弦时：低于 floor 的文档不召回（实测 Qwen3-4B：本系列章 ~0.46，跨书 ~0.31）
-/// - 无稠密时：BM25 为 0 的文档不填充
+/// 稠密通道：安全地板 + 分数悬崖（knee）截断，避免用跨书文档填满预算。
+/// 无稠密：BM25 为 0 的文档不填充。
 fn cutoff_indices(
     rank_scores: &[f32],
     dense_sims: Option<&[f32]>,
@@ -507,29 +525,164 @@ fn cutoff_indices(
     if n == 0 || k == 0 {
         return Vec::new();
     }
-    let mut idx: Vec<usize> = (0..n).collect();
-    idx.sort_by(|&a, &b| {
-        rank_scores[b]
-            .partial_cmp(&rank_scores[a])
-            .unwrap_or(std::cmp::Ordering::Equal)
-    });
 
     if let Some(sims) = dense_sims {
         let peak = sims.iter().copied().fold(0.0f32, f32::max);
         if peak <= 0.0 {
             return Vec::new();
         }
-        let floor = abs_floor.min(peak * 0.85);
-        idx.into_iter()
-            .filter(|&i| sims.get(i).copied().unwrap_or(0.0) >= floor)
-            .take(k)
-            .collect()
+        let floor = effective_floor(peak, abs_floor);
+        let keep_n = knee_k(sims, k, floor);
+        let bm25_max = sparse_scores.iter().copied().fold(0.0f32, f32::max);
+        let mut dense_idx = rank_indices(sims);
+        dense_idx.retain(|&i| sims.get(i).copied().unwrap_or(0.0) >= floor);
+        dense_idx.truncate(keep_n);
+        if bm25_max > 0.0 {
+            let mut set: HashSet<usize> = dense_idx.into_iter().collect();
+            for i in rank_indices(sparse_scores) {
+                if sparse_scores[i] > 0.0 {
+                    set.insert(i);
+                }
+            }
+            let mut all: Vec<usize> = set.into_iter().collect();
+            all.sort_by(|&a, &b| {
+                rank_scores[b]
+                    .partial_cmp(&rank_scores[a])
+                    .unwrap_or(std::cmp::Ordering::Equal)
+            });
+            all.truncate(k);
+            all
+        } else {
+            dense_idx
+        }
     } else {
-        idx.into_iter()
-            .filter(|&i| sparse_scores.get(i).copied().unwrap_or(0.0) > 0.0)
-            .take(k)
-            .collect()
+        let mut idx = rank_indices(rank_scores);
+        idx.retain(|&i| sparse_scores.get(i).copied().unwrap_or(0.0) > 0.0);
+        idx.truncate(k);
+        idx
     }
+}
+
+fn effective_floor(peak: f32, abs_floor: f32) -> f32 {
+    abs_floor.min(peak * 0.85)
+}
+
+/// 在高于 floor 的分数里找最大悬崖；没有明显悬崖则全留。
+fn knee_k(sims: &[f32], max_k: usize, floor: f32) -> usize {
+    let mut vals: Vec<f32> = sims.iter().copied().filter(|&s| s >= floor).collect();
+    if vals.is_empty() {
+        return 0;
+    }
+    vals.sort_by(|a, b| b.partial_cmp(a).unwrap());
+    let cap = vals.len().min(max_k);
+    if cap <= 3 {
+        return cap;
+    }
+    let min_keep = 5.min(cap);
+    let mut best_i = cap;
+    let mut best_gap = 0.0f32;
+    for i in min_keep..cap {
+        let gap = vals[i - 1] - vals[i];
+        if gap > best_gap {
+            best_gap = gap;
+            best_i = i;
+        }
+    }
+    let span_gap = (vals[0] - vals[cap - 1]) / (cap as f32 - 1.0).max(1.0);
+    if best_gap < (span_gap * 1.8).max(0.015) {
+        cap
+    } else {
+        best_i
+    }
+}
+
+fn cosine_similarity(a: &[f32], b: &[f32]) -> f32 {
+    let dot: f32 = a.iter().zip(b.iter()).map(|(x, y)| x * y).sum();
+    let norm_a: f32 = a.iter().map(|x| x * x).sum::<f32>().sqrt();
+    let norm_b: f32 = b.iter().map(|x| x * x).sum::<f32>().sqrt();
+    if norm_a == 0.0 || norm_b == 0.0 {
+        0.0
+    } else {
+        dot / (norm_a * norm_b)
+    }
+}
+
+fn l2_normalize(v: &mut [f32]) {
+    let n = v.iter().map(|x| x * x).sum::<f32>().sqrt().max(1e-9);
+    for x in v {
+        *x /= n;
+    }
+}
+
+/// 文首 + 文尾各一段；短文本不切。
+fn split_passages(text: &str, passage_chars: usize) -> Vec<String> {
+    let total = text.chars().count();
+    if total <= passage_chars {
+        return vec![text.to_string()];
+    }
+    let head: String = text.chars().take(passage_chars).collect();
+    let tail: String = text.chars().skip(total - passage_chars).collect();
+    if head == tail {
+        vec![head]
+    } else {
+        vec![head, tail]
+    }
+}
+
+fn maxsim_docs(
+    n: usize,
+    owner: &[usize],
+    embs: &[Vec<f32>],
+    query: &[f32],
+) -> (Vec<f32>, Vec<Vec<f32>>) {
+    let mut sims = vec![f32::NEG_INFINITY; n];
+    let mut best = vec![Vec::new(); n];
+    for (j, emb) in embs.iter().enumerate() {
+        let d = owner[j];
+        if d >= n {
+            continue;
+        }
+        let s = cosine_similarity(query, emb);
+        if s > sims[d] {
+            sims[d] = s;
+            best[d] = emb.clone();
+        }
+    }
+    for s in &mut sims {
+        if *s == f32::NEG_INFINITY {
+            *s = 0.0;
+        }
+    }
+    (sims, best)
+}
+
+/// 伪相关反馈：q' = normalize(q + α · mean(top-m 最佳段落向量))
+fn prf_expand(query: &[f32], best_emb: &[Vec<f32>], sims: &[f32], m: usize, alpha: f32) -> Vec<f32> {
+    let mut idx = rank_indices(sims);
+    idx.retain(|&i| i < best_emb.len() && !best_emb[i].is_empty());
+    let m = m.min(idx.len()).max(1);
+    let dim = query.len();
+    let mut acc = vec![0.0f32; dim];
+    let mut used = 0usize;
+    for &i in idx.iter().take(m) {
+        if best_emb[i].len() != dim {
+            continue;
+        }
+        for (d, &v) in best_emb[i].iter().enumerate() {
+            acc[d] += v;
+        }
+        used += 1;
+    }
+    if used == 0 {
+        return query.to_vec();
+    }
+    let used_f = used as f32;
+    let mut out = vec![0.0f32; dim];
+    for d in 0..dim {
+        out[d] = query[d] + alpha * (acc[d] / used_f);
+    }
+    l2_normalize(&mut out);
+    out
 }
 
 /// 按分数降序返回排名（rank 从 0 开始，分数相同按原顺序，保证稳定性）
@@ -592,6 +745,35 @@ mod tests {
         // peak*0.85=0.272 < abs 0.36 → floor=0.272，两条都过
         let kept = cutoff_indices(&rrf, Some(&dense), &sparse, 10, 0.36);
         assert_eq!(kept.len(), 2);
+    }
+
+    #[test]
+    fn knee_cuts_at_cluster_cliff() {
+        let mut sims = vec![0.50, 0.48, 0.47, 0.46, 0.45, 0.44, 0.43, 0.42];
+        sims.extend_from_slice(&[0.28, 0.27, 0.26, 0.25, 0.24]);
+        let k = knee_k(&sims, 20, 0.20);
+        assert!(k >= 8 && k <= 9, "knee={k} sims_above_cliff should be 8");
+    }
+
+    #[test]
+    fn split_passages_head_and_tail() {
+        let s: String = (0..200).map(|i| char::from_u32(0x4e00 + i).unwrap()).collect();
+        let ps = split_passages(&s, 40);
+        assert_eq!(ps.len(), 2);
+        assert_eq!(ps[0].chars().count(), 40);
+        assert_eq!(ps[1].chars().count(), 40);
+        assert_eq!(ps[0].chars().next(), s.chars().next());
+        assert_eq!(ps[1].chars().last(), s.chars().last());
+    }
+
+    #[test]
+    fn prf_moves_query_toward_top_docs() {
+        let q = vec![1.0, 0.0];
+        let best = vec![vec![1.0, 0.0], vec![0.9, 0.1], vec![0.0, 1.0]];
+        let sims = vec![0.9, 0.8, 0.1];
+        let q2 = prf_expand(&q, &best, &sims, 2, 1.0);
+        // top-2 are on the x-axis cluster; y component should stay small
+        assert!(q2[0] > q2[1], "{q2:?}");
     }
 }
 
