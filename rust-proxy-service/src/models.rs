@@ -186,7 +186,7 @@ pub struct RecallRequest {
 }
 
 fn default_algorithm() -> String {
-    "car".to_string()
+    "hybrid".to_string()
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

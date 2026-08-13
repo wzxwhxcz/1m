@@ -622,6 +622,7 @@ pub struct SystemConfig {
     rate_limit_per_minute: u32,
     max_context_length: usize,
     upstream_timeout_secs: u64,
+    recall_timeout_secs: u64,
 }
 
 #[derive(Debug, Deserialize)]
@@ -632,6 +633,7 @@ pub struct UpdateSystemConfigRequest {
     rate_limit_per_minute: Option<u32>,
     max_context_length: Option<usize>,
     upstream_timeout_secs: Option<u64>,
+    recall_timeout_secs: Option<u64>,
     // 兼容前端 { key, value } 单字段更新模式
     key: Option<String>,
     value: Option<String>,
@@ -648,6 +650,7 @@ fn to_system_config(cfg: &RuntimeConfig) -> SystemConfig {
         rate_limit_per_minute: cfg.rate_limit_per_minute,
         max_context_length: cfg.max_context_length,
         upstream_timeout_secs: cfg.upstream_timeout_secs,
+        recall_timeout_secs: cfg.recall_timeout_secs,
     }
 }
 
@@ -678,6 +681,7 @@ pub async fn update_system_config_handler(
             ("rate_limit_per_minute", req.rate_limit_per_minute.map(|v| v.to_string())),
             ("max_context_length", req.max_context_length.map(|v| v.to_string())),
             ("upstream_timeout_secs", req.upstream_timeout_secs.map(|v| v.to_string())),
+            ("recall_timeout_secs", req.recall_timeout_secs.map(|v| v.to_string())),
         ].into_iter().filter_map(|(k, v)| v.map(|v| (k, v))).collect();
         for (k, v) in updates {
             set_system_config(&state.db, k, &v)
@@ -692,6 +696,7 @@ pub async fn update_system_config_handler(
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
     let cfg = RuntimeConfig::from_map(&map);
     *state.config.write().map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "config lock poisoned".into()))? = cfg.clone();
+    state.recall_service.set_timeout(cfg.recall_timeout_secs);
 
     Ok(Json(to_system_config(&cfg)))
 }

@@ -1,5 +1,5 @@
 use axum::{
-    extract::State,
+    extract::{DefaultBodyLimit, State},
     http::StatusCode,
     response::{IntoResponse, Response},
     routing::{get, post},
@@ -8,7 +8,7 @@ use axum::{
 use std::sync::Arc;
 use tower_http::cors::CorsLayer;
 use tracing::{info, error};
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 
 mod cache;
 mod embedding;
@@ -104,6 +104,7 @@ async fn main() -> anyhow::Result<()> {
         .route("/api/v1/recall", post(recall))
         .route("/api/v1/cache/stats", get(cache_stats))
         .layer(CorsLayer::permissive())
+        .layer(DefaultBodyLimit::max(50 * 1024 * 1024))
         .with_state(state);
 
     let addr = format!("0.0.0.0:{}", port);

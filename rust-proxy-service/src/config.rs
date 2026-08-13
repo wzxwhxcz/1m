@@ -13,6 +13,8 @@ pub struct RuntimeConfig {
     pub max_context_length: usize,
     /// 上游请求超时（秒）
     pub upstream_timeout_secs: u64,
+    /// 调用 recall 服务超时（秒）。稠密 embedding 大 batch 可达 2 分钟，默认 300
+    pub recall_timeout_secs: u64,
 }
 
 impl Default for RuntimeConfig {
@@ -23,6 +25,7 @@ impl Default for RuntimeConfig {
             rate_limit_per_minute: 60,
             max_context_length: 2_000_000,
             upstream_timeout_secs: 300,
+            recall_timeout_secs: 300,
         }
     }
 }
@@ -39,6 +42,7 @@ impl RuntimeConfig {
             rate_limit_per_minute: parse(map, "rate_limit_per_minute", base.rate_limit_per_minute),
             max_context_length: parse(map, "max_context_length", base.max_context_length),
             upstream_timeout_secs: parse(map, "upstream_timeout_secs", base.upstream_timeout_secs),
+            recall_timeout_secs: parse(map, "recall_timeout_secs", base.recall_timeout_secs),
         }
     }
 }
@@ -125,7 +129,10 @@ impl Config {
             },
             recall: RecallConfig {
                 urls: recall_urls,
-                timeout_secs: 30,
+                timeout_secs: std::env::var("RECALL_TIMEOUT_SECS")
+                    .ok()
+                    .and_then(|s| s.parse().ok())
+                    .unwrap_or(300),
             },
         }
     }

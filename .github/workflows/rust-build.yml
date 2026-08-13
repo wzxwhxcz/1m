@@ -51,11 +51,17 @@ jobs:
     - name: Cache target directory
       uses: actions/cache@v3
       with:
-        path: rust-proxy-service/target
+        path: |
+          rust-proxy-service/target
+          rust-recall-service/target
         key: ${{ runner.os }}-cargo-build-${{ hashFiles('**/Cargo.lock') }}
 
     - name: Build Proxy Service
       working-directory: rust-proxy-service
+      run: cargo build --release --target ${{ matrix.target }}
+
+    - name: Build Recall Service
+      working-directory: rust-recall-service
       run: cargo build --release --target ${{ matrix.target }}
 
     - name: Package Binaries (Linux)
@@ -63,6 +69,7 @@ jobs:
       run: |
         mkdir -p dist
         cp rust-proxy-service/target/${{ matrix.target }}/release/proxy-server dist/
+        cp rust-recall-service/target/${{ matrix.target }}/release/recall-server dist/
         cd dist
         tar -czf ../${{ matrix.artifact_name }} *
 
@@ -72,6 +79,7 @@ jobs:
       run: |
         New-Item -ItemType Directory -Force -Path dist
         Copy-Item rust-proxy-service/target/${{ matrix.target }}/release/proxy-server.exe dist/
+        Copy-Item rust-recall-service/target/${{ matrix.target }}/release/recall-server.exe dist/
         Compress-Archive -Path dist/* -DestinationPath ${{ matrix.artifact_name }}
 
     - name: Upload Artifacts

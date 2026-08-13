@@ -21,7 +21,7 @@ pub struct RecallRequest {
 }
 
 fn default_algorithm() -> RecallAlgorithm {
-    RecallAlgorithm::Car
+    RecallAlgorithm::Hybrid
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -109,10 +109,7 @@ impl RecallService {
         // 计算相似度
         let similarities = self.compute_similarities(&message_embeddings, &query_embedding);
         
-        // 选择 top-k
-        let indices = self.top_k_indices(&similarities, k);
-        
-        Ok(indices.into_iter().map(|i| messages[i].clone()).collect())
+        Ok(self.take_in_original_order(messages, &similarities, k))
     }
 
     /// Hybrid DAT 召回：时间衰减 + 语义相似度
@@ -137,16 +134,14 @@ impl RecallService {
             .map(|(sim, time)| 0.6 * sim + 0.4 * time)
             .collect();
         
-        let indices = self.top_k_indices(&hybrid_scores, k);
-        Ok(indices.into_iter().map(|i| messages[i].clone()).collect())
+        Ok(self.take_in_original_order(messages, &hybrid_scores, k))
     }
 
     /// BM25 召回：纯词法稀疏检索（无 embedding 依赖）
     /// 对标识符、专名、术语等精确匹配场景强于稠密检索（2026 基准：BM25 在金融文档上全面胜出稠密）。
     fn bm25_recall(&self, messages: &[Message], query: &str, k: usize) -> Vec<Message> {
         let scores = bm25_scores(messages, query);
-        let indices = self.top_k_indices(&scores, k);
-        indices.into_iter().map(|i| messages[i].clone()).collect()
+        self.take_in_original_order(messages, &scores, k)
     }
 
     /// 混合检索：BM25(稀疏) + 稠密向量，RRF 融合（2026 RAG 生产标准）。
@@ -188,8 +183,7 @@ impl RecallService {
             }
         }
 
-        let indices = self.top_k_indices(&rrf_scores, k);
-        Ok(indices.into_iter().map(|i| messages[i].clone()).collect())
+        Ok(self.take_in_original_order(messages, &rrf_scores, k))
     }
 
     /// CAR 召回：聚类感知召回
@@ -272,7 +266,14 @@ impl RecallService {
         }
     }
 
-    /// 获取 top-k 索引
+    /// 按分数取 top-k，再恢复原始顺序（对话历史连贯性 > 分数序）
+    fn take_in_original_order(&self, messages: &[Message], scores: &[f32], k: usize) -> Vec<Message> {
+        let mut indices = self.top_k_indices(scores, k);
+        indices.sort_unstable();
+        indices.into_iter().map(|i| messages[i].clone()).collect()
+    }
+
+    /// 获取 top-k 索引（分数降序）
     fn top_k_indices(&self, scores: &[f32], k: usize) -> Vec<usize> {
         let mut indexed: Vec<(usize, f32)> = scores.iter()
             .enumerate()
@@ -484,3 +485,28 @@ fn rank_indices(scores: &[f32]) -> Vec<usize> {
     });
     idx
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn tokenize_glues_cjk_across_spaces() {
+        let q = tokenize("redis连接池线程安全");
+        let d = tokenize("redis 连接 池的线程 安全问题");
+        let set: HashSet<&String> = d.iter().collect();
+        let shared = q.iter().filter(|t| set.contains(t)).count();
+        assert!(shared * 100 / q.len() >= 80, "shared={}/{}", shared, q.len());
+    }
+
+    #[test]
+    fn bm25_zero_when_query_absent() {
+        let msgs = vec![
+            Message { role: "user".into(), content: "罗辑在黑暗森林里等待".into() },
+            Message { role: "user".into(), content: "孙悟空大闹天宫".into() },
+        ];
+        let scores = bm25_scores(&msgs, "三体");
+        assert!(scores.iter().all(|&s| s == 0.0), "{:?}", scores);
+    }
+}
+

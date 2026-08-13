@@ -86,15 +86,25 @@ async fn main() -> anyhow::Result<()> {
     let jwt_secret = rust_proxy_service::config::jwt_secret();
 
     // Create services
+    let recall_timeout = runtime_config.recall_timeout_secs.max(config.recall.timeout_secs);
     let recall_service = Arc::new(RecallService::new(
         config.recall.urls.clone(),
-        config.recall.timeout_secs,
+        recall_timeout,
     ));
-    tracing::info!("Recall service created with {} instances", config.recall.urls.len());
+    tracing::info!(
+        "Recall service created with {} instances (timeout {}s)",
+        config.recall.urls.len(),
+        recall_timeout
+    );
 
     // 上游请求超时（管理后台 upstream_timeout_secs 可调，默认 300s）
     let proxy_service = Arc::new(ProxyService::new(runtime_config.upstream_timeout_secs));
     tracing::info!("Proxy service created (timeout {}s)", runtime_config.upstream_timeout_secs);
+
+    let request_timeout_secs = runtime_config
+        .recall_timeout_secs
+        .saturating_add(runtime_config.upstream_timeout_secs)
+        .max(300);
 
     // Create application state
     let state = AppState {
@@ -149,7 +159,8 @@ async fn main() -> anyhow::Result<()> {
         // Middleware
         .layer(CorsLayer::permissive())
         .layer(TraceLayer::new_for_http())
-        .layer(TimeoutLayer::new(Duration::from_secs(300)))
+        // 整请求超时 = recall + 上游，避免稠密通道把整段请求裁掉
+        .layer(TimeoutLayer::new(Duration::from_secs(request_timeout_secs)))
         // 压缩代理需要接收 1M token 级别的大上下文（>4MB），
         // Axum 默认 2MB 请求体上限会拒绝这类请求（413）
         .layer(DefaultBodyLimit::max(50 * 1024 * 1024));

@@ -12,10 +12,10 @@ pub struct CacheManager {
 impl CacheManager {
     /// 创建缓存管理器
     pub async fn new(_redis_url: &str) -> Result<Self> {
-        // 创建 10000 条目，1小时 TTL 的内存缓存
+        // 5 万条目、24h TTL：同一会话二次压缩应几乎全命中
         let cache = Cache::builder()
-            .max_capacity(10_000)
-            .time_to_live(Duration::from_secs(3600))
+            .max_capacity(50_000)
+            .time_to_live(Duration::from_secs(24 * 3600))
             .build();
         
         Ok(Self { cache })
